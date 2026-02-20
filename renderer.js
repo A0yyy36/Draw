@@ -4,6 +4,8 @@ let nodes = [];
 let edges = [];
 let nodeId = 0;
 
+let selectedNode = null;
+
 // ===== ノード追加 =====
 document.getElementById("addBtn").onclick = () => {
     const node = {
@@ -17,17 +19,13 @@ document.getElementById("addBtn").onclick = () => {
 
     nodes.push(node);
     drawNode(node);
-
-    // ノードが2つ以上なら自動接続
-    if(nodes.length >= 2){
-        connect(nodes[nodes.length - 2], node);
-    }
 };
 
-// ===== 描画 =====
+// ===== ノード描画 =====
 function drawNode(node){
     const rect = document.createElementNS(
-        "http://www.w3.org/2000/svg","rect"
+        "http://www.w3.org/2000/svg", 
+        "rect"
     );
 
     rect.setAttribute("width",node.w);
@@ -38,6 +36,7 @@ function drawNode(node){
     updateNodePosition(node);
 
     enableDrag(rect,node);
+    enableConnect(rect,node);
     
     svg.appendChild(rect);
 }
@@ -50,18 +49,50 @@ function updateNodePosition(node){
     updateEdges();
 }
 
+// ===== 接続処理 =====
+function enableConnect(el,node){
+    el.addEventListener("click",(e)=>{
+        e.stopPropagation();
+
+        if (!selectedNode) {
+            selectedNode = node;
+            highlight(node, true);
+        } 
+        else {
+            if (selectedNode !== node) {
+                connect(selectedNode, node);
+            }
+            highlight(selectedNode, false);
+            selectedNode = null;
+        }
+    });
+}
+
+// ===== ハイライト =====
+function highlight(node, on) {
+    node.el.setAttribute(
+        "stroke",
+        on ? "red" : "none"
+    );
+    node.el.setAttribute(
+        "stroke-width",
+        on ? "3" : "0"
+    );
+}
+
 // ===== 接続線作成 =====
-function connect(a,b){
+function connect(a, b) {
     const line = document.createElementNS(
-    "http://www.w3.org/2000/svg","line"
+        "http://www.w3.org/2000/svg",
+        "line"
     );
 
-    line.setAttribute("stroke","#333");
-    line.setAttribute("stroke-width","2");
+    line.setAttribute("stroke", "#333");
+    line.setAttribute("stroke-width", "2");
 
     svg.prepend(line);
 
-    edges.push({a,b,line});
+    edges.push({ a, b, line });
     updateEdges();
 }
 
