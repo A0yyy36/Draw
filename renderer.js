@@ -60,7 +60,7 @@ function enableConnect(el,node){
         } 
         else {
             if (selectedNode !== node) {
-                connect(selectedNode, node);
+                toggleConnection(selectedNode, node);
             }
             highlight(selectedNode, false);
             selectedNode = null;
@@ -80,8 +80,23 @@ function highlight(node, on) {
     );
 }
 
-// ===== 接続線作成 =====
-function connect(a, b) {
+function toggleConnection(a, b) {
+
+    // 既存エッジ検索（順不同対応）
+    const existingIndex = edges.findIndex(e =>
+        (e.a === a && e.b === b) ||
+        (e.a === b && e.b === a)
+    );
+
+    // 既に存在 → 削除
+    if (existingIndex !== -1) {
+        const edge = edges[existingIndex];
+        edge.line.remove(); // SVGから削除
+        edges.splice(existingIndex, 1); // 配列から削除
+        return;
+    }
+
+    // 存在しない → 追加
     const line = document.createElementNS(
         "http://www.w3.org/2000/svg",
         "line"
