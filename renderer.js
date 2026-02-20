@@ -68,7 +68,7 @@ function enableConnect(el,node){
     });
 }
 
-// ===== ハイライト =====
+// ===== ハイライト(red) =====
 function highlight(node, on) {
     node.el.setAttribute(
         "stroke",
