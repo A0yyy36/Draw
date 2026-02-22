@@ -21,6 +21,29 @@ document.getElementById("addBtn").onclick = () => {
     drawNode(node);
 };
 
+// ===== 矢印マーカー定義（初期化時に一度だけ実行）=====
+function initArrowMarker() {
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    
+    marker.setAttribute("id", "arrowhead");
+    marker.setAttribute("markerWidth", "10");
+    marker.setAttribute("markerHeight", "7");
+    marker.setAttribute("refX", "10");
+    marker.setAttribute("refY", "3.5");
+    marker.setAttribute("orient", "auto");
+    
+    const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    polygon.setAttribute("points", "0 0, 10 3.5, 0 7");
+    polygon.setAttribute("fill", "#333");
+    
+    marker.appendChild(polygon);
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+}
+
+initArrowMarker(); // 呼び出し
+
 // ===== ノード描画 =====
 function drawNode(node){
     const rect = document.createElementNS(
@@ -104,6 +127,7 @@ function toggleConnection(a, b) {
 
     line.setAttribute("stroke", "#333");
     line.setAttribute("stroke-width", "2");
+    line.setAttribute("marker-end", "url(#arrowhead)");
 
     svg.prepend(line);
 
@@ -112,17 +136,39 @@ function toggleConnection(a, b) {
 }
 
 // ===== 線位置更新 =====
-function updateEdges(){
-    edges.forEach(e=>{
-        const ax = e.a.x + e.a.w/2;
-        const ay = e.a.y + e.a.h/2;
-        const bx = e.b.x + e.b.w/2;
-        const by = e.b.y + e.b.h/2;
+function updateEdges() {
+    edges.forEach(e => {
+        const ax = e.a.x + e.a.w / 2;
+        const ay = e.a.y + e.a.h / 2;
+        const bx = e.b.x + e.b.w / 2;
+        const by = e.b.y + e.b.h / 2;
 
-        e.line.setAttribute("x1",ax);
-        e.line.setAttribute("y1",ay);
-        e.line.setAttribute("x2",bx);
-        e.line.setAttribute("y2",by);
+        // 中心間のベクトル
+        const dx = bx - ax;
+        const dy = by - ay;
+
+        // ノードbの縁までの距離を計算（矩形との交差）
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        const hw = e.b.w / 2; // 半幅
+        const hh = e.b.h / 2; // 半高さ
+
+        // 矩形の縁に当たるtを求める（直線をt=0:a中心, t=1:b中心 とパラメータ化）
+        let t = 1;
+        if (absDx > 0 || absDy > 0) {
+            const tx = absDx > 0 ? hw / absDx : Infinity;
+            const ty = absDy > 0 ? hh / absDy : Infinity;
+            t = Math.min(tx, ty); // 先に縁に当たる方向を採用
+        }
+
+        // 矢印の先端（ノードbの縁）
+        const endX = bx - dx * t;
+        const endY = by - dy * t;
+
+        e.line.setAttribute("x1", ax);
+        e.line.setAttribute("y1", ay);
+        e.line.setAttribute("x2", endX);
+        e.line.setAttribute("y2", endY);
     });
 }
 
