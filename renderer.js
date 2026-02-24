@@ -173,6 +173,8 @@ function updateEdges() {
 }
 
 // ===== ドラッグ =====
+const SNAP_THRESHOLD = 5; // スナップ距離の閾値
+
 function enableDrag(el,node){
     let dragging=false;
     let ox,oy;
@@ -183,14 +185,54 @@ function enableDrag(el,node){
         oy=e.offsetY-node.y;
     });
 
-    svg.addEventListener("mousemove",(e)=>{
-        if(!dragging) return;
+    svg.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
 
-        node.x=e.offsetX-ox;
-        node.y=e.offsetY-oy;
+        node.x = e.offsetX - ox;
+        node.y = e.offsetY - oy;
+
+        // ===== スナップ処理 =====
+        nodes.forEach(other => {
+            if (other === node) return;
+
+            // 中心X同士を比較
+            const nodeCx  = node.x  + node.w  / 2;
+            const otherCx = other.x + other.w / 2;
+            if (Math.abs(nodeCx - otherCx) < SNAP_THRESHOLD) {
+                node.x = otherCx - node.w / 2;
+            }
+
+            // 中心Y同士を比較
+            const nodeCy  = node.y  + node.h  / 2;
+            const otherCy = other.y + other.h / 2;
+            if (Math.abs(nodeCy - otherCy) < SNAP_THRESHOLD) {
+                node.y = otherCy - node.h / 2;
+            }
+
+            // 左端同士
+            if (Math.abs(node.x - other.x) < SNAP_THRESHOLD) {
+                node.x = other.x;
+            }
+
+            // 右端同士
+            if (Math.abs((node.x + node.w) - (other.x + other.w)) < SNAP_THRESHOLD) {
+                node.x = other.x + other.w - node.w;
+            }
+
+            // 上端同士
+            if (Math.abs(node.y - other.y) < SNAP_THRESHOLD) {
+                node.y = other.y;
+            }
+
+            // 下端同士
+            if (Math.abs((node.y + node.h) - (other.y + other.h)) < SNAP_THRESHOLD) {
+                node.y = other.y + other.h - node.h;
+            }
+        });
+        // ====================
 
         updateNodePosition(node);
     });
 
-    window.addEventListener("mouseup",()=>dragging=false);
+    window.addEventListener("mouseup", () => dragging = false);
 }
