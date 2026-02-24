@@ -14,7 +14,9 @@ document.getElementById("addBtn").onclick = () => {
         y: 100 + nodeId * 20, 
         w: 120, 
         h: 50, 
-        el: null
+        label: `Node ${nodeId}`, 
+        el: null, 
+        textEl: null
     };
 
     nodes.push(node);
@@ -50,25 +52,42 @@ function drawNode(node){
         "http://www.w3.org/2000/svg", 
         "rect"
     );
-
     rect.setAttribute("width",node.w);
     rect.setAttribute("height",node.h);
     rect.setAttribute("fill","#2196F3");
-    
     node.el = rect;
-    updateNodePosition(node);
 
+    const text = document.createElementNS(
+        "http://www.w3.org/2000/svg", 
+        "text"
+    );
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "middle");
+    text.setAttribute("fill", "white");
+    text.setAttribute("font-size", "14");
+    text.setAttribute("pointer-events", "none");
+    text.textContent = node.label;
+    node.textEl = text;
+
+    updateNodePosition(node);
     enableDrag(rect,node);
     enableConnect(rect,node);
+    enableEdit(rect, node);
     
     svg.appendChild(rect);
+    svg.appendChild(text);
 }
 
 // ===== ノード位置更新 =====
 function updateNodePosition(node){
     node.el.setAttribute("x",node.x);
     node.el.setAttribute("y",node.y);
-
+    
+    if (node.textEl) {
+        node.textEl.setAttribute("x", node.x + node.w / 2);
+        node.textEl.setAttribute("y", node.y + node.h / 2);
+    }
+    
     updateEdges();
 }
 
@@ -235,4 +254,59 @@ function enableDrag(el,node){
     });
 
     window.addEventListener("mouseup", () => dragging = false);
+}
+
+function enableEdit(el, node) {
+    el.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+
+        // 既存のinputがあれば無視
+        if (document.getElementById("node-input")) return;
+
+        // SVGのスクリーン座標を取得
+        const svgRect = svg.getBoundingClientRect();
+
+        // input要素をSVG上に重ねて配置
+        const input = document.createElement("input");
+        input.id = "node-input";
+        input.type = "text";
+        input.value = node.label;
+
+        // 矩形の位置・サイズに合わせてinputを配置
+        Object.assign(input.style, {
+            position:   "absolute",
+            left:       (svgRect.left + node.x) + "px",
+            top:        (svgRect.top  + node.y) + "px",
+            width:      node.w + "px",
+            height:     node.h + "px",
+            fontSize:   "14px",
+            textAlign:  "center",
+            border:     "2px solid red",
+            borderRadius: "0",
+            background: "#1976D2",
+            color:      "white",
+            outline:    "none",
+            boxSizing:  "border-box",
+            zIndex:     "1000",
+        });
+
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+
+        // 確定：Enterキー or フォーカスが外れたとき
+        function commit() {
+            const newLabel = input.value.trim();
+            node.label = newLabel || node.label; // 空なら元のラベルを維持
+            node.textEl.textContent = node.label;
+            input.remove();
+        }
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") input.remove(); // キャンセル
+        });
+
+        input.addEventListener("blur", commit);
+    });
 }
