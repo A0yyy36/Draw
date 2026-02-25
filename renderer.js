@@ -7,21 +7,24 @@ let nodeId = 0;
 let selectedNode = null;
 
 // ===== ノード追加 =====
-document.getElementById("addBtn").onclick = () => {
-    const node = {
-        id: nodeId++,
-        x: 100 + nodeId * 20, 
-        y: 100 + nodeId * 20, 
-        w: 120, 
-        h: 50, 
-        label: `Node ${nodeId}`, 
-        el: null, 
-        textEl: null
+document.querySelectorAll("button[data-shape]").forEach(btn => {
+    btn.onclick = () => {
+        const shape = btn.dataset.shape;
+        const node = {
+            id: nodeId++,
+            x: 100 + nodeId * 20,
+            y: 100 + nodeId * 20,
+            w: shape === "diamond" ? 140 : 120, // 菱形は少し広く
+            h: 60,
+            label: `Node ${nodeId}`,
+            shape,
+            el: null,
+            textEl: null
+        };
+        nodes.push(node);
+        drawNode(node);
     };
-
-    nodes.push(node);
-    drawNode(node);
-};
+});
 
 // ===== 矢印マーカー定義（初期化時に一度だけ実行）=====
 function initArrowMarker() {
@@ -48,14 +51,8 @@ initArrowMarker(); // 呼び出し
 
 // ===== ノード描画 =====
 function drawNode(node){
-    const rect = document.createElementNS(
-        "http://www.w3.org/2000/svg", 
-        "rect"
-    );
-    rect.setAttribute("width",node.w);
-    rect.setAttribute("height",node.h);
-    rect.setAttribute("fill","#2196F3");
-    node.el = rect;
+    const shapeEl = createShapeEl(node);
+    node.el = shapeEl;
 
     const text = document.createElementNS(
         "http://www.w3.org/2000/svg", 
@@ -70,24 +67,112 @@ function drawNode(node){
     node.textEl = text;
 
     updateNodePosition(node);
-    enableDrag(rect,node);
-    enableConnect(rect,node);
-    enableEdit(rect, node);
+    enableDrag(shapeEl,node);
+    enableConnect(shapeEl,node);
+    enableEdit(shapeEl, node);
     
-    svg.appendChild(rect);
+    svg.appendChild(shapeEl);
     svg.appendChild(text);
 }
 
-// ===== ノード位置更新 =====
-function updateNodePosition(node){
-    node.el.setAttribute("x",node.x);
-    node.el.setAttribute("y",node.y);
-    
-    if (node.textEl) {
-        node.textEl.setAttribute("x", node.x + node.w / 2);
-        node.textEl.setAttribute("y", node.y + node.h / 2);
+function createShapeEl(node) {
+    const { shape, w, h } = node;
+
+    if (shape === "rounded") {
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("width", w);
+        rect.setAttribute("height", h);
+        rect.setAttribute("rx", h / 2);
+        rect.setAttribute("ry", h / 2);
+        rect.setAttribute("fill", "#4CAF50");
+        return rect;
     }
-    
+
+    if (shape === "diamond") {
+        const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        poly.setAttribute("fill", "#FF9800");
+        poly._isDiamond = true;
+        return poly;
+    }
+
+    if (shape === "parallelogram") {
+        const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        poly.setAttribute("fill", "#9C27B0");
+        poly._isParallelogram = true;
+        return poly;
+    }
+
+    if (shape === "cylinder") {
+        const g   = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        const rx  = w / 2;
+        const ry  = 10;
+
+        const body = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        body.setAttribute("x", 0);
+        body.setAttribute("y", ry);          // 上楕円の分だけ下げる
+        body.setAttribute("width", w);
+        body.setAttribute("height", h - ry * 2);
+        body.setAttribute("fill", "#F44336");
+
+        // 下楕円（先に描いてbodyで隠す）
+        const bottom = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+        bottom.setAttribute("cx", rx);
+        bottom.setAttribute("cy", h - ry);
+        bottom.setAttribute("rx", rx);
+        bottom.setAttribute("ry", ry);
+        bottom.setAttribute("fill", "#E57373");
+
+        // 上楕円（最前面）
+        const top = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+        top.setAttribute("cx", rx);
+        top.setAttribute("cy", ry);
+        top.setAttribute("rx", rx);
+        top.setAttribute("ry", ry);
+        top.setAttribute("fill", "#EF9A9A");
+
+        g.appendChild(body);
+        g.appendChild(bottom);
+        g.appendChild(top);
+        g._isCylinder = true;
+        return g;
+    }
+
+    // デフォルト：rect（処理）
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("width", w);
+    rect.setAttribute("height", h);
+    rect.setAttribute("fill", "#2196F3");
+    return rect;
+}
+
+// ===== ノード位置更新 =====
+function updateNodePosition(node) {
+    const el = node.el;
+    const { x, y, w, h } = node;
+
+    if (el._isDiamond) {
+        const cx = x + w / 2, cy = y + h / 2;
+        el.setAttribute("points",
+            `${cx},${y} ${x + w},${cy} ${cx},${y + h} ${x},${cy}`
+        );
+    } else if (el._isParallelogram) {
+        const skew = 15;
+        el.setAttribute("points",
+            `${x + skew},${y} ${x + w},${y} ${x + w - skew},${y + h} ${x},${y + h}`
+        );
+    } else if (el._isCylinder) {
+        el.setAttribute("transform", `translate(${x}, ${y})`);
+    } else {
+        // rect・角丸rect
+        el.setAttribute("x", x);
+        el.setAttribute("y", y);
+    }
+
+    if (node.textEl) {
+        node.textEl.setAttribute("x", x + w / 2);
+        node.textEl.setAttribute("y", y + h / 2);
+    }
+
     updateEdges();
 }
 
@@ -112,14 +197,18 @@ function enableConnect(el,node){
 
 // ===== ハイライト(red) =====
 function highlight(node, on) {
-    node.el.setAttribute(
-        "stroke",
-        on ? "red" : "none"
-    );
-    node.el.setAttribute(
-        "stroke-width",
-        on ? "3" : "0"
-    );
+    const el = node.el;
+
+    if (el._isCylinder) {
+        // g内のrect・ellipse全部にstrokeを適用
+        el.querySelectorAll("rect, ellipse").forEach(child => {
+            child.setAttribute("stroke", on ? "red" : "none");
+            child.setAttribute("stroke-width", on ? "3" : "0");
+        });
+    } else {
+        el.setAttribute("stroke", on ? "red" : "none");
+        el.setAttribute("stroke-width", on ? "3" : "0");
+    }
 }
 
 function toggleConnection(a, b) {
