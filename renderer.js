@@ -361,22 +361,65 @@ function enableEdit(el, node) {
         input.type = "text";
         input.value = node.label;
 
+        const shapeStyles = {
+            rect: {
+                background:   "#1976D2",
+                borderRadius: "0",
+                clipPath:     "",
+                transform:    "",
+            },
+            rounded: {
+                background:   "#388E3C",
+                borderRadius: (node.h / 2) + "px",
+                clipPath:     "",
+                transform:    "",
+            },
+            diamond: {
+                background:   "#F57C00",
+                borderRadius: "0",
+                clipPath:     "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+                transform:    "",
+            },
+            parallelogram: {
+                background:   "#7B1FA2",
+                borderRadius: "0",
+                clipPath:     "polygon(15px 0%, 100% 0%, calc(100% - 15px) 100%, 0% 100%)",
+                transform:    "",
+            },
+            cylinder: {
+                background:   "#C62828",
+                borderRadius: "50% / 10px",
+                clipPath:     "",
+                transform:    "",
+            },
+        };
+
+        const cx = svgRect.left + node.x + node.w / 2;
+        const cy = svgRect.top  + node.y + node.h / 2;
+
+        const ss = shapeStyles[node.shape] || shapeStyles.rect;
+
         // 矩形の位置・サイズに合わせてinputを配置
         Object.assign(input.style, {
-            position:   "absolute",
-            left:       (svgRect.left + node.x) + "px",
-            top:        (svgRect.top  + node.y) + "px",
-            width:      node.w + "px",
-            height:     node.h + "px",
-            fontSize:   "14px",
-            textAlign:  "center",
-            border:     "2px solid red",
-            borderRadius: "0",
-            background: "#1976D2",
-            color:      "white",
-            outline:    "none",
-            boxSizing:  "border-box",
-            zIndex:     "1000",
+            position:        "absolute",
+            left:            (svgRect.left + node.x) + "px", 
+            top:             (svgRect.top  + node.y) + "px", 
+            width:           node.w + "px", 
+            height:          node.h + "px", 
+            fontSize:        "14px", 
+            textAlign:       "center", 
+            border:          "2px solid red",
+            borderRadius:    ss.borderRadius,
+            background:      ss.background,
+            clipPath:        ss.clipPath,
+            transform:       ss.transform,
+            transformOrigin: "center center",
+            color:           "white",
+            outline:         "none",
+            boxSizing:       "border-box",
+            lineHeight:      node.h + "px",
+            padding:         "0",
+            zIndex:          "1000",
         });
 
         document.body.appendChild(input);
