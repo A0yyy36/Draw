@@ -49,6 +49,37 @@ function initArrowMarker() {
 
 initArrowMarker(); // 呼び出し
 
+// ===== ノード削除 =====
+function deleteNode(node) {
+    // 接続されているエッジを削除
+    edges = edges.filter(e => {
+        if (e.a === node || e.b === node) {
+            e.line.remove();
+            return false;
+        }
+        return true;
+    });
+
+    // SVG要素を削除
+    node.el.remove();
+    node.textEl.remove();
+
+    // 配列から削除
+    nodes = nodes.filter(n => n !== node);
+
+    selectedNode = null;
+}
+
+// ===== Backspaceキーで選択中ノードを削除 =====
+window.addEventListener("keydown", (e) => {
+    // input編集中は無視
+    if (document.getElementById("node-input")) return;
+
+    if (e.key === "Backspace" && selectedNode) {
+        deleteNode(selectedNode);
+    }
+});
+
 // ===== ノード描画 =====
 function drawNode(node){
     const shapeEl = createShapeEl(node);
