@@ -198,11 +198,27 @@ function updateNodePosition(node) {
     } else if (el._isCylinder) {
         el.setAttribute("transform", `translate(${x}, ${y})`);
         const rx = w / 2;
-        el.querySelector("rect").setAttribute("width", w);
-        el.querySelectorAll("ellipse").forEach(e => {
-            e.setAttribute("cx", rx);
-            e.setAttribute("rx", rx);
-        });
+        const ry = 10;
+
+        const body   = el.querySelector("rect");
+        const ellipses = el.querySelectorAll("ellipse");
+        const bottom = ellipses[0];
+        const top    = ellipses[1];
+
+        body.setAttribute("x", 0);
+        body.setAttribute("y", ry);
+        body.setAttribute("width", w);
+        body.setAttribute("height", Math.max(0, h - ry * 2));
+
+        bottom.setAttribute("cx", rx);
+        bottom.setAttribute("cy", h - ry);
+        bottom.setAttribute("rx", rx);
+        bottom.setAttribute("ry", ry);
+
+        top.setAttribute("cx", rx);
+        top.setAttribute("cy", ry);
+        top.setAttribute("rx", rx);
+        top.setAttribute("ry", ry);
     } else {
         // rect・角丸rect
         el.setAttribute("x", x);
