@@ -21,6 +21,7 @@ document.querySelectorAll("button[data-shape]").forEach(btn => {
             w: shape === "diamond" ? 140 : 120, 
             h: 60,
             label: `Node ${nodeId}`,
+            fontsize: 14,
             shape,
             el: null,
             textEl: null
@@ -96,7 +97,7 @@ function drawNode(node){
     text.setAttribute("text-anchor", "middle");
     text.setAttribute("dominant-baseline", "middle");
     text.setAttribute("fill", "white");
-    text.setAttribute("font-size", "14");
+    text.setAttribute("font-size", node.fontsize ?? 14);
     text.setAttribute("pointer-events", "none");
     text.textContent = node.label;
     node.textEl = text;
@@ -361,6 +362,10 @@ function enableConnect(el,node){
             selectedNode = node;
             highlight(node, true);
             showResizeHandles(node);
+
+            const size = node.fontSize ?? 14;
+            fontSizeSlider.value = size;
+            fontSizeValue.textContent = size;
         } 
         else {
             if (selectedNode !== node) {
@@ -631,3 +636,18 @@ function enableEdit(el, node) {
         input.addEventListener("blur", commit);
     });
 }
+
+// ===== 文字サイズ変更 =====
+const fontSizeSlider = document.getElementById("font-size-slider");
+const fontSizeValue  = document.getElementById("font-size-value");
+
+fontSizeSlider.addEventListener("input", () => {
+    const size = fontSizeSlider.value;
+    fontSizeValue.textContent = size;
+
+    // 選択中のノードだけに適用
+    if (selectedNode) {
+        selectedNode.fontSize = parseInt(size);
+        selectedNode.textEl.setAttribute("font-size", size);
+    }
+});

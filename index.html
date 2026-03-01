@@ -12,6 +12,11 @@
         <button data-shape="diamond">分岐・判断</button>
         <button data-shape="parallelogram">入出力</button>
         <button data-shape="cylinder">データベース</button>
+
+        <label>文字サイズ:
+            <input type="range" id="font-size-slider" min="8" max="36" value="14" step="1">
+            <span id="font-size-value">14</span>px
+        </label>
         <svg id="canvas" width="900" height="600" style="border:1px solid #ccc;"></svg>
 
         <script src="renderer.js"></script>
