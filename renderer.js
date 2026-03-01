@@ -3,8 +3,12 @@ const svg = document.getElementById("canvas");
 let nodes = [];
 let edges = [];
 let nodeId = 0;
-
 let selectedNode = null;
+
+let resizeHandleGroup = null;
+let resizingNode = null;
+let resizeDir = null;
+let resizeStart = null;
 
 // ===== ノード追加 =====
 document.querySelectorAll("button[data-shape]").forEach(btn => {
@@ -14,7 +18,7 @@ document.querySelectorAll("button[data-shape]").forEach(btn => {
             id: nodeId++,
             x: 100 + nodeId * 20,
             y: 100 + nodeId * 20,
-            w: shape === "diamond" ? 140 : 120, // 菱形は少し広く
+            w: shape === "diamond" ? 140 : 120, 
             h: 60,
             label: `Node ${nodeId}`,
             shape,
@@ -193,10 +197,22 @@ function updateNodePosition(node) {
         );
     } else if (el._isCylinder) {
         el.setAttribute("transform", `translate(${x}, ${y})`);
+        const rx = w / 2;
+        el.querySelector("rect").setAttribute("width", w);
+        el.querySelectorAll("ellipse").forEach(e => {
+            e.setAttribute("cx", rx);
+            e.setAttribute("rx", rx);
+        });
     } else {
         // rect・角丸rect
         el.setAttribute("x", x);
         el.setAttribute("y", y);
+        el.setAttribute("width", w);
+        el.setAttribute("height", h);
+        if (node.shape === "rounded") {
+            el.setAttribute("rx", h / 2);
+            el.setAttribute("ry", h / 2);
+        }
     }
 
     if (node.textEl) {
@@ -205,7 +221,120 @@ function updateNodePosition(node) {
     }
 
     updateEdges();
+    if (resizeHandleGroup && resizingNode === node) {
+        updateResizeHandles(node);
+    }
 }
+
+const HANDLE_SIZE = 8;
+const DIRS = ["nw","n","ne","e","se","s","sw","w"];
+
+function getHandlePositions(node) {
+    const { x, y, w, h } = node;
+    return {
+        nw: [x,     y    ], n:  [x+w/2, y    ], ne: [x+w,   y    ],
+        e:  [x+w,   y+h/2],                      se: [x+w,   y+h  ],
+        s:  [x+w/2, y+h  ], sw: [x,     y+h  ], w:  [x,     y+h/2],
+    };
+}
+
+function showResizeHandles(node) {
+    hideResizeHandles();
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    resizeHandleGroup = g;
+
+    DIRS.forEach(dir => {
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("width",  HANDLE_SIZE);
+        rect.setAttribute("height", HANDLE_SIZE);
+        rect.setAttribute("fill",   "#fff");
+        rect.setAttribute("stroke", "#e91e63");
+        rect.setAttribute("stroke-width", "1.5");
+        rect.setAttribute("rx", "2");
+        rect.style.cursor = getCursorForDir(dir);
+
+        rect.addEventListener("mousedown", (e) => {
+            e.stopPropagation();
+            startResize(node, dir, e);
+        });
+
+        g._handles = g._handles || {};
+        g._handles[dir] = rect;
+        g.appendChild(rect);
+    });
+
+    svg.appendChild(g);
+    updateResizeHandles(node);
+}
+
+function updateResizeHandles(node) {
+    if (!resizeHandleGroup) return;
+    const pos = getHandlePositions(node);
+    DIRS.forEach(dir => {
+        const rect = resizeHandleGroup._handles[dir];
+        const [hx, hy] = pos[dir];
+        rect.setAttribute("x", hx - HANDLE_SIZE / 2);
+        rect.setAttribute("y", hy - HANDLE_SIZE / 2);
+    });
+}
+
+function hideResizeHandles() {
+    if (resizeHandleGroup) {
+        resizeHandleGroup.remove();
+        resizeHandleGroup = null;
+    }
+}
+
+function getCursorForDir(dir) {
+    const map = {
+        nw: "nw-resize", n: "n-resize",  ne: "ne-resize",
+        e:  "e-resize",  se: "se-resize", s:  "s-resize",
+        sw: "sw-resize", w:  "w-resize"
+    };
+    return map[dir];
+}
+
+const MIN_W = 40, MIN_H = 30;
+
+function startResize(node, dir, e) {
+    resizingNode = node;
+    resizeDir = dir;
+    resizeStart = {
+        mx: e.clientX, my: e.clientY,
+        x: node.x, y: node.y,
+        w: node.w, h: node.h
+    };
+}
+
+window.addEventListener("mousemove", (e) => {
+    if (!resizingNode) return;
+
+    const dx = e.clientX - resizeStart.mx;
+    const dy = e.clientY - resizeStart.my;
+    const s = resizeStart;
+    const node = resizingNode;
+
+    let nx = s.x, ny = s.y, nw = s.w, nh = s.h;
+
+    if (resizeDir.includes("e")) nw = Math.max(MIN_W, s.w + dx);
+    if (resizeDir.includes("w")) { nw = Math.max(MIN_W, s.w - dx); nx = s.x + s.w - nw; }
+    if (resizeDir.includes("s")) nh = Math.max(MIN_H, s.h + dy);
+    if (resizeDir.includes("n")) { nh = Math.max(MIN_H, s.h - dy); ny = s.y + s.h - nh; }
+
+    node.x = nx; node.y = ny;
+    node.w = nw; node.h = nh;
+
+    updateNodePosition(node);
+    updateResizeHandles(node);
+});
+
+window.addEventListener("mouseup", () => {
+    if (resizingNode) {
+        resizingNode = null;
+        resizeDir = null;
+        resizeStart = null;
+    }
+});
 
 // ===== 接続処理 =====
 function enableConnect(el,node){
@@ -215,16 +344,28 @@ function enableConnect(el,node){
         if (!selectedNode) {
             selectedNode = node;
             highlight(node, true);
+            showResizeHandles(node);
         } 
         else {
             if (selectedNode !== node) {
                 toggleConnection(selectedNode, node);
             }
             highlight(selectedNode, false);
+            hideResizeHandles();
             selectedNode = null;
         }
     });
 }
+
+svg.addEventListener("click", (e) => {
+    if (e.target === svg) {
+        if (selectedNode) {
+            highlight(selectedNode, false);
+            selectedNode = null;
+        }
+        hideResizeHandles();
+    }
+});
 
 // ===== ハイライト(red) =====
 function highlight(node, on) {
@@ -319,6 +460,7 @@ function enableDrag(el,node){
     let ox,oy;
 
     el.addEventListener("mousedown",(e)=>{
+        if (resizingNode) return;
         dragging=true;
         ox=e.offsetX-node.x;
         oy=e.offsetY-node.y;
