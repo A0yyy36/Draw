@@ -14,6 +14,17 @@ let resizeStart = null;
 document.querySelectorAll("button[data-shape]").forEach(btn => {
     btn.onclick = () => {
         const shape = btn.dataset.shape;
+
+        if (shape === "save") {
+            saveFlowchart();
+            return;
+        }
+
+        if (shape === "load") {
+            document.getElementById("load-input").click();
+            return;
+        }
+
         const node = {
             id: nodeId++,
             x: 100 + nodeId * 20,
@@ -30,6 +41,99 @@ document.querySelectorAll("button[data-shape]").forEach(btn => {
         drawNode(node);
     };
 });
+
+// ===== ファイル選択 =====
+document.getElementById("load-input").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            loadFlowchart(data);
+        } catch {
+            alert("JSONの読み込みに失敗しました。");
+        }
+    };
+    reader.readAsText(file);
+    // 同じファイルを再度選択できるようにリセット
+    e.target.value = "";
+});
+
+// ===== 保存 =====
+function saveFlowchart() {
+    const data = {
+        nodeId, 
+        nodes: nodes.map(n => ({
+            id:       n.id,
+            x:        n.x,
+            y:        n.y,
+            w:        n.w,
+            h:        n.h,
+            label:    n.label,
+            fontsize: n.fontsize ?? 14,
+            shape:    n.shape,
+        })),
+        edges: edges.map(e => ({
+            aId: e.a.id,
+            bId: e.b.id,
+        })),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = "flowchart.json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ===== 読み込み =====
+function loadFlowchart(jsonData) {
+    // 既存ノード・エッジをすべてクリア
+    nodes.forEach(n => { n.el.remove(); n.textEl.remove(); });
+    edges.forEach(e => e.line.remove());
+    nodes = [];
+    edges = [];
+    hideResizeHandles();
+    selectedNode = null;
+
+    nodeId = jsonData.nodeId ?? 0;
+
+    // ノードを復元
+    jsonData.nodes.forEach(nd => {
+        const node = {
+            id:       nd.id,
+            x:        nd.x,
+            y:        nd.y,
+            w:        nd.w,
+            h:        nd.h,
+            label:    nd.label,
+            fontsize: nd.fontsize ?? 14,
+            shape:    nd.shape,
+            el:       null,
+            textEl:   null,
+        };
+        nodes.push(node);
+        drawNode(node);
+    });
+
+    // エッジを復元
+    jsonData.edges.forEach(ed => {
+        const a = nodes.find(n => n.id === ed.aId);
+        const b = nodes.find(n => n.id === ed.bId);
+        if (!a || !b) return;
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("stroke", "#333");
+        line.setAttribute("stroke-width", "2");
+        line.setAttribute("marker-end", "url(#arrowhead)");
+        svg.prepend(line);
+        edges.push({ a, b, line });
+    });
+
+    updateEdges();
+}
 
 // ===== 矢印マーカー定義（初期化時に一度だけ実行）=====
 function initArrowMarker() {
