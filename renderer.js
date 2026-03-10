@@ -467,7 +467,7 @@ function enableConnect(el,node){
             highlight(node, true);
             showResizeHandles(node);
 
-            const size = node.fontSize ?? 14;
+            const size = node.fontsize ?? 14;
             fontSizeSlider.value = size;
             fontSizeValue.textContent = size;
         } 
@@ -751,7 +751,7 @@ fontSizeSlider.addEventListener("input", () => {
 
     // 選択中のノードだけに適用
     if (selectedNode) {
-        selectedNode.fontSize = parseInt(size);
+        selectedNode.fontsize = parseInt(size);
         selectedNode.textEl.setAttribute("font-size", size);
     }
 });

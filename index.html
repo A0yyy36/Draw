@@ -3,17 +3,91 @@
     <head>
         <meta charset = "UTF-8">
         <title>Flowchart App</title>
+        <style>
+            .accordion-wrapper {
+                display: inline-block;
+                vertical-align: middle;
+                position: relative;
+            }
+
+            .accordion-trigger {
+                cursor: pointer;
+                padding: 4px 10px;
+                background: #f0f0f0;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+                user-select: none;
+            }
+
+            .accordion-trigger::after {
+                content: ' ▾';
+                font-size: 11px;
+            }
+
+            .accordion-trigger.open::after {
+                content: ' ▴';
+            }
+
+            .accordion-menu {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                background: #fff;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+                z-index: 100;
+                min-width: 140px;
+                padding: 4px 0;
+            }
+
+            .accordion-menu.open {
+                display: block;
+            }
+
+            .accordion-menu button,
+            .accordion-menu label {
+                display: block;
+                width: 100%;
+                padding: 7px 16px;
+                text-align: left;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 14px;
+                white-space: nowrap;
+                box-sizing: border-box;
+            }
+
+            .accordion-menu button:hover,
+            .accordion-menu label:hover {
+                background: #f5f5f5;
+            }
+        </style>
     </head>
 
     <body>
-        <button data-shape="save">保存</button>
-        <button data-shape="load">ファイルを開く</button>
+        <div class="accordion-wrapper">
+            <span class="accordion-trigger" id="file-menu-trigger">ファイル</span>
+            <div class="accordion-menu" id="file-menu">
+                <button data-shape="save">保存</button>
+                <label for="load-input">ファイルを開く</label>
+            </div>
+        </div>
         <input type="file" id="load-input" accept=".json" style="display:none">
-        <button data-shape="rect">処理</button>
-        <button data-shape="rounded">開始・終了</button>
-        <button data-shape="diamond">分岐・判断</button>
-        <button data-shape="parallelogram">入出力</button>
-        <button data-shape="cylinder">データベース</button>
+
+        <div class="accordion-wrapper">
+            <span class="accordion-trigger" id="shape-menu-trigger">図形</span>
+            <div class="accordion-menu" id="shape-menu">
+                <button data-shape="rect">処理</button>
+                <button data-shape="rounded">開始・終了</button>
+                <button data-shape="diamond">分岐・判断</button>
+                <button data-shape="parallelogram">入出力</button>
+                <button data-shape="cylinder">データベース</button>
+            </div>
+        </div>
 
         <label>文字サイズ:
             <input type="range" id="font-size-slider" min="8" max="36" value="14" step="1">
@@ -21,7 +95,41 @@
         </label>
         <svg id="canvas" width="900" height="600" style="border:1px solid #ccc;"></svg>
 
+        <script>
+            // すべてのアコーディオンをまとめて初期化
+            const accordions = [
+                { triggerId: 'file-menu-trigger', menuId: 'file-menu' },
+                { triggerId: 'shape-menu-trigger', menuId: 'shape-menu' },
+            ];
+
+            accordions.forEach(({ triggerId, menuId }) => {
+                const trigger = document.getElementById(triggerId);
+                const menu = document.getElementById(menuId);
+
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = menu.classList.toggle('open');
+                    trigger.classList.toggle('open', isOpen);
+
+                    // 他のメニューを閉じる
+                    accordions.forEach(({ triggerId: otherId, menuId: otherMenuId }) => {
+                        if (otherId !== triggerId) {
+                            document.getElementById(otherMenuId).classList.remove('open');
+                            document.getElementById(otherId).classList.remove('open');
+                        }
+                    });
+                });
+            });
+
+            // メニュー外クリックで全て閉じる
+            document.addEventListener('click', () => {
+                accordions.forEach(({ triggerId, menuId }) => {
+                    document.getElementById(menuId).classList.remove('open');
+                    document.getElementById(triggerId).classList.remove('open');
+                });
+            });
+        </script>
+
         <script src="renderer.js"></script>
-        
     </body>
 </html>
