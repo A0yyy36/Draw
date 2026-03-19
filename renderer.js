@@ -89,8 +89,12 @@ window.addEventListener("keyup", (e) => {
 });
 
 // ===== 矩形選択 =====
-let isSelecting   = false;
-let selStart      = null; // スクリーン座標
+let isSelecting      = false;
+let selStart         = null; // スクリーン座標
+let selPressTimer    = null; // 長押し検出タイマー
+let selPendingEvent  = null; // mousedown時のイベントを保持
+let _justFinishedSelecting = false; // 矩形選択直後のclick誤発火防止
+const SEL_LONG_PRESS_MS = 200; // 長押し判定時間(ms)
 
 function startSelectionBox(e) {
     const r = svg.getBoundingClientRect();
@@ -118,6 +122,8 @@ function updateSelectionBox(e) {
 function finishSelectionBox() {
     selBox.setAttribute("display", "none");
     isSelecting = false;
+    _justFinishedSelecting = true; // 直後のclickを無視するフラグ
+    setTimeout(() => { _justFinishedSelecting = false; }, 0);
 
     // スクリーン座標から論理座標に変換してヒットテスト
     const sx = parseFloat(selBox.getAttribute("x"));
@@ -164,9 +170,14 @@ svg.addEventListener("mousedown", (e) => {
         svg.style.cursor = "grabbing";
         e.preventDefault();
     } else if (e.button === 0 && onBackground) {
-        // 背景左ドラッグ: 矩形選択開始
-        clearSelection();
-        startSelectionBox(e);
+        // 背景左ボタン: 長押しで矩形選択開始
+        selPendingEvent = e;
+        selPressTimer = setTimeout(() => {
+            selPressTimer = null;
+            clearSelection();
+            startSelectionBox(selPendingEvent);
+            svg.style.cursor = "crosshair";
+        }, SEL_LONG_PRESS_MS);
         e.preventDefault();
     }
 });
@@ -177,6 +188,20 @@ window.addEventListener("mousemove", (e) => {
         viewY = panStart.vy + (e.clientY - panStart.my);
         applyTransform();
     }
+    // 長押しタイマー中にドラッグ開始→即座に矩形選択へ移行
+    if (selPressTimer && selPendingEvent) {
+        const r = svg.getBoundingClientRect();
+        const dx = (e.clientX - selPendingEvent.clientX);
+        const dy = (e.clientY - selPendingEvent.clientY);
+        if (dx*dx + dy*dy > 16) { // 4px以上動いたら
+            clearTimeout(selPressTimer);
+            selPressTimer = null;
+            clearSelection();
+            startSelectionBox(selPendingEvent);
+            svg.style.cursor = "crosshair";
+            selPendingEvent = null;
+        }
+    }
     if (isSelecting) updateSelectionBox(e);
 });
 
@@ -185,7 +210,17 @@ window.addEventListener("mouseup", (e) => {
         isPanning = false;
         svg.style.cursor = spaceDown ? "grab" : "";
     }
-    if (isSelecting) finishSelectionBox();
+    // 長押しタイマーがまだ生きていればキャンセル（短クリック→選択クリア）
+    if (selPressTimer) {
+        clearTimeout(selPressTimer);
+        selPressTimer = null;
+        selPendingEvent = null;
+        clearSelection();
+    }
+    if (isSelecting) {
+        finishSelectionBox();
+        svg.style.cursor = "";
+    }
 });
 
 // ===== ホイール: トラックパッド2本指→パン、Ctrl+ホイール→ズーム、ホイール→上下スクロール =====
@@ -534,7 +569,7 @@ function enableConnect(el, node) {
 }
 
 svg.addEventListener("click", (e) => {
-    if (isPanning || isSelecting) return;
+    if (isPanning || isSelecting || _justFinishedSelecting) return;
     const t = e.target;
     if (t===svg || t===mainGroup || t===gridGroup || t.closest?.("#grid-group")) {
         clearSelection();
@@ -555,16 +590,16 @@ function highlight(node, on) {
     }
 }
 
-// 複数選択用ハイライト（青）
+// 複数選択用ハイライト
 function highlightMulti(node, on) {
     const el = node.el;
     if (el._isCylinder) {
         el.querySelectorAll("rect,ellipse").forEach(c => {
-            c.setAttribute("stroke", on?"#2196F3":"none");
+            c.setAttribute("stroke", on?"red":"none");
             c.setAttribute("stroke-width", on?"3":"0");
         });
     } else {
-        el.setAttribute("stroke", on?"#2196F3":"none");
+        el.setAttribute("stroke", on?"red":"none");
         el.setAttribute("stroke-width", on?"3":"0");
     }
 }
