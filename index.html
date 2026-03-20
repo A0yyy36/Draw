@@ -35,12 +35,13 @@
                 display: flex;
                 flex-direction: column;
             }
+
+            /* ===== アコーディオン ===== */
             .accordion-wrapper {
                 display: inline-block;
                 vertical-align: middle;
                 position: relative;
             }
-
             .accordion-trigger {
                 cursor: pointer;
                 padding: 4px 10px;
@@ -50,16 +51,8 @@
                 font-size: 14px;
                 user-select: none;
             }
-
-            .accordion-trigger::after {
-                content: ' ▾';
-                font-size: 11px;
-            }
-
-            .accordion-trigger.open::after {
-                content: ' ▴';
-            }
-
+            .accordion-trigger::after      { content: ' ▾'; font-size: 11px; }
+            .accordion-trigger.open::after { content: ' ▴'; }
             .accordion-menu {
                 display: none;
                 position: absolute;
@@ -73,11 +66,7 @@
                 min-width: 140px;
                 padding: 4px 0;
             }
-
-            .accordion-menu.open {
-                display: block;
-            }
-
+            .accordion-menu.open { display: block; }
             .accordion-menu button,
             .accordion-menu label {
                 display: block;
@@ -91,62 +80,164 @@
                 white-space: nowrap;
                 box-sizing: border-box;
             }
-
             .accordion-menu button:hover,
-            .accordion-menu label:hover {
-                background: #f5f5f5;
+            .accordion-menu label:hover { background: #f5f5f5; }
+
+            /* ===== セパレータ ===== */
+            .sep {
+                width: 1px;
+                height: 24px;
+                background: #ddd;
+                margin: 0 2px;
+                flex-shrink: 0;
             }
+
+            /* ===== エッジスタイルボタン ===== */
+            .edge-btn {
+                padding: 3px 8px;
+                background: #f0f0f0;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+            .edge-btn:hover   { background: #e0e0e0; }
+            .edge-btn.active  { background: #1976D2; color: #fff; border-color: #1976D2; }
+
+            /* ===== エッジ選択パネル（画面下部） ===== */
+            #edge-panel {
+                display: none;
+                position: fixed;
+                bottom: 14px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #fff;
+                border: 1px solid #bbb;
+                border-radius: 8px;
+                padding: 6px 14px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                z-index: 200;
+                white-space: nowrap;
+            }
+            #edge-panel.visible { display: flex; }
+            #edge-panel .ep-label { color: #666; font-size: 11px; }
+            #edge-panel .edge-btn { font-size: 11px; padding: 2px 7px; }
+            #ep-color { width: 26px; height: 22px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; padding: 0; }
+            #ep-delete { background: #e53935; color: #fff; border-color: #e53935; }
+            #ep-delete:hover { background: #c62828; }
         </style>
     </head>
 
     <body>
         <div id="toolbar">
-        <div class="accordion-wrapper">
-            <span class="accordion-trigger" id="file-menu-trigger">ファイル</span>
-            <div class="accordion-menu" id="file-menu">
-                <button data-shape="save">保存</button>
-                <label for="load-input">ファイルを開く</label>
-            </div>
-        </div>
-        <input type="file" id="load-input" accept=".json" style="display:none">
 
-        <div class="accordion-wrapper">
-            <span class="accordion-trigger" id="shape-menu-trigger">図形</span>
-            <div class="accordion-menu" id="shape-menu">
-                <button data-shape="rect">処理</button>
-                <button data-shape="rounded">開始・終了</button>
-                <button data-shape="diamond">分岐・判断</button>
-                <button data-shape="parallelogram">入出力</button>
-                <button data-shape="cylinder">データベース</button>
+            <!-- ファイルメニュー -->
+            <div class="accordion-wrapper">
+                <span class="accordion-trigger" id="file-menu-trigger">ファイル</span>
+                <div class="accordion-menu" id="file-menu">
+                    <button data-shape="save">保存</button>
+                    <label for="load-input">ファイルを開く</label>
+                </div>
             </div>
-        </div>
+            <input type="file" id="load-input" accept=".json" style="display:none">
 
-        <label>文字サイズ:
-            <input type="range" id="font-size-slider" min="8" max="36" value="14" step="1">
-            <span id="font-size-value">14</span>px
-        </label>
+            <!-- 図形メニュー -->
+            <div class="accordion-wrapper">
+                <span class="accordion-trigger" id="shape-menu-trigger">図形</span>
+                <div class="accordion-menu" id="shape-menu">
+                    <button data-shape="rect">処理</button>
+                    <button data-shape="rounded">開始・終了</button>
+                    <button data-shape="diamond">分岐・判断</button>
+                    <button data-shape="parallelogram">入出力</button>
+                    <button data-shape="cylinder">データベース</button>
+                </div>
+            </div>
+
+            <div class="sep"></div>
+
+            <!-- 矢印スタイル -->
+            <span style="font-size:12px;color:#555;">矢印:</span>
+            <button class="edge-btn active" data-estyle="straight">直線</button>
+            <button class="edge-btn"        data-estyle="bezier">曲線</button>
+            <button class="edge-btn"        data-estyle="orthogonal">折れ線</button>
+
+            <div class="sep"></div>
+
+            <!-- 矢印種類 -->
+            <span style="font-size:12px;color:#555;">種類:</span>
+            <button class="edge-btn active" data-arrow="end">→ 終点</button>
+            <button class="edge-btn"        data-arrow="both">↔ 両方</button>
+            <button class="edge-btn"        data-arrow="none">― なし</button>
+
+            <div class="sep"></div>
+
+            <!-- 線種 -->
+            <span style="font-size:12px;color:#555;">線:</span>
+            <button class="edge-btn active" data-dash="solid">実線</button>
+            <button class="edge-btn"        data-dash="dashed">破線</button>
+            <button class="edge-btn"        data-dash="dotted">点線</button>
+
+            <div class="sep"></div>
+
+            <!-- 線色・太さ -->
+            <span style="font-size:12px;color:#555;">色:</span>
+            <input type="color" id="edge-color" value="#333333"
+                   style="width:28px;height:24px;border:1px solid #ccc;border-radius:3px;cursor:pointer;padding:0;">
+            <span style="font-size:12px;color:#555;">太さ:</span>
+            <input type="range" id="edge-width" min="1" max="8" value="2" step="0.5" style="width:60px;">
+            <span id="edge-width-value" style="font-size:12px;min-width:18px;">2</span>
+
+            <div class="sep"></div>
+
+            <!-- 文字サイズ -->
+            <label style="font-size:12px;">文字:
+                <input type="range" id="font-size-slider" min="8" max="36" value="14" step="1" style="width:70px;">
+                <span id="font-size-value">14</span>px
+            </label>
+
         </div><!-- #toolbar -->
+
         <div id="canvas-wrap">
-        <svg id="canvas"></svg>
+            <svg id="canvas"></svg>
+        </div>
+
+        <!-- 選択エッジ操作パネル -->
+        <div id="edge-panel" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()">
+            <span class="ep-label">選択中の矢印 ▸</span>
+            <span class="ep-label">スタイル:</span>
+            <button class="edge-btn" id="ep-straight">直線</button>
+            <button class="edge-btn" id="ep-bezier">曲線</button>
+            <button class="edge-btn" id="ep-orthogonal">折れ線</button>
+            <span class="ep-label">矢印:</span>
+            <button class="edge-btn" id="ep-end">→</button>
+            <button class="edge-btn" id="ep-both">↔</button>
+            <button class="edge-btn" id="ep-none">―</button>
+            <span class="ep-label">線種:</span>
+            <button class="edge-btn" id="ep-solid">実線</button>
+            <button class="edge-btn" id="ep-dashed">破線</button>
+            <button class="edge-btn" id="ep-dotted">点線</button>
+            <span class="ep-label">色:</span>
+            <input type="color" id="ep-color" value="#333333">
+            <button class="edge-btn" id="ep-delete" style="background:#e53935;color:#fff;border-color:#e53935;">削除</button>
         </div>
 
         <script>
-            // すべてのアコーディオンをまとめて初期化
+            // ===== アコーディオン初期化 =====
             const accordions = [
                 { triggerId: 'file-menu-trigger', menuId: 'file-menu' },
                 { triggerId: 'shape-menu-trigger', menuId: 'shape-menu' },
             ];
-
             accordions.forEach(({ triggerId, menuId }) => {
                 const trigger = document.getElementById(triggerId);
-                const menu = document.getElementById(menuId);
-
+                const menu    = document.getElementById(menuId);
                 trigger.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const isOpen = menu.classList.toggle('open');
                     trigger.classList.toggle('open', isOpen);
-
-                    // 他のメニューを閉じる
                     accordions.forEach(({ triggerId: otherId, menuId: otherMenuId }) => {
                         if (otherId !== triggerId) {
                             document.getElementById(otherMenuId).classList.remove('open');
@@ -155,8 +246,6 @@
                     });
                 });
             });
-
-            // メニュー外クリックで全て閉じる
             document.addEventListener('click', () => {
                 accordions.forEach(({ triggerId, menuId }) => {
                     document.getElementById(menuId).classList.remove('open');
