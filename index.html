@@ -254,6 +254,13 @@
             });
         </script>
 
-        <script src="renderer.js"></script>
+        <!-- 読み込み順序が依存関係を決定します。変更しないでください -->
+        <script src="state.js"></script>    <!-- 1. グローバル状態 -->
+        <script src="canvas.js"></script>   <!-- 2. SVG初期化・グリッド・座標変換 -->
+        <script src="edge.js"></script>     <!-- 3. エッジ（nodeより先にロード） -->
+        <script src="flownode.js"></script>     <!-- 4. ノード（edgeの関数を利用） -->
+        <script src="viewport.js"></script> <!-- 5. パン・ズーム・矩形選択 -->
+        <script src="toolbar.js"></script>  <!-- 6. ツールバーUI -->
+        <script src="fileio.js"></script>   <!-- 7. 保存・読み込み -->
     </body>
 </html>
