@@ -1,25 +1,117 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <meta charset = "UTF-8">
+        <meta charset="UTF-8">
         <title>Flowchart App</title>
         <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
             html, body {
                 height: 100%;
                 overflow: hidden;
-                font-family: sans-serif;
+                font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
             }
+
+            /* ===== レイアウト骨格 ===== */
+            body {
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* 上部ツールバー */
             #toolbar {
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                padding: 6px 10px;
-                background: #fafafa;
-                border-bottom: 1px solid #ddd;
+                padding: 5px 10px;
+                background: #f4f5f7;
+                border-bottom: 1px solid #d0d3da;
                 flex-shrink: 0;
                 flex-wrap: wrap;
+                z-index: 10;
             }
+
+            /* ツールバー以下の横並びエリア */
+            #main-area {
+                display: flex;
+                flex: 1;
+                overflow: hidden;
+            }
+
+            /* ===== 左サイドパネル ===== */
+            #side-panel {
+                width: 72px;
+                background: #f4f5f7;
+                border-right: 1px solid #d0d3da;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 10px 0 16px;
+                gap: 2px;
+                overflow-y: auto;
+                flex-shrink: 0;
+                user-select: none;
+            }
+
+            .panel-section-label {
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                color: #888;
+                text-transform: uppercase;
+                padding: 8px 0 4px;
+                width: 100%;
+                text-align: center;
+            }
+            .panel-section-label:first-child {
+                padding-top: 0;
+            }
+
+            .panel-sep {
+                width: 44px;
+                height: 1px;
+                background: #d0d3da;
+                margin: 6px 0;
+            }
+
+            /* 図形タイル */
+            .shape-tile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 56px;
+                padding: 6px 4px 4px;
+                background: transparent;
+                border: 1.5px solid transparent;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: background 0.13s, border-color 0.13s, box-shadow 0.13s;
+                gap: 3px;
+            }
+            .shape-tile:hover {
+                background: #e6eaf4;
+                border-color: #4a7cdc;
+                box-shadow: 0 1px 5px rgba(74,124,220,0.18);
+            }
+            .shape-tile:active {
+                background: #d0daf5;
+                border-color: #2c5cc5;
+            }
+            .shape-tile svg {
+                display: block;
+            }
+            .shape-tile-label {
+                font-size: 9px;
+                color: #555;
+                text-align: center;
+                line-height: 1.2;
+                white-space: nowrap;
+            }
+            .shape-tile:hover .shape-tile-label {
+                color: #1a3f8f;
+            }
+
+            /* ===== キャンバスエリア ===== */
             #canvas-wrap {
                 flex: 1;
                 overflow: hidden;
@@ -31,10 +123,6 @@
                 display: block;
                 background: #fff;
             }
-            body {
-                display: flex;
-                flex-direction: column;
-            }
 
             /* ===== アコーディオン ===== */
             .accordion-wrapper {
@@ -45,13 +133,14 @@
             .accordion-trigger {
                 cursor: pointer;
                 padding: 4px 10px;
-                background: #f0f0f0;
+                background: #fff;
                 border: 1px solid #ccc;
                 border-radius: 4px;
-                font-size: 14px;
+                font-size: 13px;
                 user-select: none;
+                color: #333;
             }
-            .accordion-trigger::after      { content: ' ▾'; font-size: 11px; }
+            .accordion-trigger::after      { content: ' ▾'; font-size: 10px; }
             .accordion-trigger.open::after { content: ' ▴'; }
             .accordion-menu {
                 display: none;
@@ -60,10 +149,10 @@
                 left: 0;
                 background: #fff;
                 border: 1px solid #ccc;
-                border-radius: 4px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-                z-index: 100;
-                min-width: 140px;
+                border-radius: 5px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+                z-index: 200;
+                min-width: 130px;
                 padding: 4px 0;
             }
             .accordion-menu.open { display: block; }
@@ -76,18 +165,19 @@
                 background: none;
                 border: none;
                 cursor: pointer;
-                font-size: 14px;
+                font-size: 13px;
                 white-space: nowrap;
                 box-sizing: border-box;
+                color: #222;
             }
             .accordion-menu button:hover,
-            .accordion-menu label:hover { background: #f5f5f5; }
+            .accordion-menu label:hover { background: #f0f4ff; }
 
             /* ===== セパレータ ===== */
             .sep {
                 width: 1px;
-                height: 24px;
-                background: #ddd;
+                height: 22px;
+                background: #d0d3da;
                 margin: 0 2px;
                 flex-shrink: 0;
             }
@@ -95,22 +185,23 @@
             /* ===== エッジスタイルボタン ===== */
             .edge-btn {
                 padding: 3px 8px;
-                background: #f0f0f0;
+                background: #fff;
                 border: 1px solid #ccc;
                 border-radius: 4px;
                 font-size: 12px;
                 cursor: pointer;
                 white-space: nowrap;
+                color: #333;
             }
-            .edge-btn:hover   { background: #e0e0e0; }
-            .edge-btn.active  { background: #1976D2; color: #fff; border-color: #1976D2; }
+            .edge-btn:hover   { background: #eef1fb; border-color: #4a7cdc; }
+            .edge-btn.active  { background: #1976D2; color: #fff; border-color: #1565C0; }
 
             /* ===== エッジ選択パネル（画面下部） ===== */
             #edge-panel {
                 display: none;
                 position: fixed;
                 bottom: 14px;
-                left: 50%;
+                left: calc(72px + 50%);
                 transform: translateX(-50%);
                 background: #fff;
                 border: 1px solid #bbb;
@@ -120,7 +211,7 @@
                 align-items: center;
                 gap: 8px;
                 font-size: 12px;
-                z-index: 200;
+                z-index: 300;
                 white-space: nowrap;
             }
             #edge-panel.visible { display: flex; }
@@ -133,8 +224,8 @@
     </head>
 
     <body>
+        <!-- ===== 上部ツールバー ===== -->
         <div id="toolbar">
-
             <!-- ファイルメニュー -->
             <div class="accordion-wrapper">
                 <span class="accordion-trigger" id="file-menu-trigger">ファイル</span>
@@ -144,18 +235,6 @@
                 </div>
             </div>
             <input type="file" id="load-input" accept=".json" style="display:none">
-
-            <!-- 図形メニュー -->
-            <div class="accordion-wrapper">
-                <span class="accordion-trigger" id="shape-menu-trigger">図形</span>
-                <div class="accordion-menu" id="shape-menu">
-                    <button data-shape="rect">処理</button>
-                    <button data-shape="rounded">開始・終了</button>
-                    <button data-shape="diamond">分岐・判断</button>
-                    <button data-shape="parallelogram">入出力</button>
-                    <button data-shape="cylinder">データベース</button>
-                </div>
-            </div>
 
             <div class="sep"></div>
 
@@ -198,12 +277,70 @@
                 <input type="range" id="font-size-slider" min="8" max="36" value="14" step="1" style="width:70px;">
                 <span id="font-size-value">14</span>px
             </label>
-
         </div><!-- #toolbar -->
 
-        <div id="canvas-wrap">
-            <svg id="canvas"></svg>
-        </div>
+        <!-- ===== ツールバー以下：サイドパネル＋キャンバス ===== -->
+        <div id="main-area">
+
+            <!-- 左サイドパネル（図形パレット） -->
+            <div id="side-panel">
+                <span class="panel-section-label">図形</span>
+
+                <!-- 処理（矩形） -->
+                <button class="shape-tile" data-shape="rect" title="処理">
+                    <svg viewBox="0 0 48 32" width="48" height="32">
+                        <rect x="3" y="3" width="42" height="26" rx="2" fill="#2196F3" stroke="#1565C0" stroke-width="1"/>
+                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-family="sans-serif">処理</text>
+                    </svg>
+                    <span class="shape-tile-label">処理</span>
+                </button>
+
+                <!-- 開始・終了（角丸） -->
+                <button class="shape-tile" data-shape="rounded" title="開始・終了">
+                    <svg viewBox="0 0 48 32" width="48" height="32">
+                        <rect x="3" y="3" width="42" height="26" rx="13" fill="#4CAF50" stroke="#2e7d32" stroke-width="1"/>
+                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="7.5" font-family="sans-serif">開始/終了</text>
+                    </svg>
+                    <span class="shape-tile-label">開始/終了</span>
+                </button>
+
+                <!-- 分岐・判断（菱形） -->
+                <button class="shape-tile" data-shape="diamond" title="分岐・判断">
+                    <svg viewBox="0 0 48 32" width="48" height="32">
+                        <polygon points="24,2 46,16 24,30 2,16" fill="#FF9800" stroke="#e65100" stroke-width="1"/>
+                        <text x="24" y="16" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="8" font-family="sans-serif">分岐</text>
+                    </svg>
+                    <span class="shape-tile-label">分岐/判断</span>
+                </button>
+
+                <!-- 入出力（平行四辺形） -->
+                <button class="shape-tile" data-shape="parallelogram" title="入出力">
+                    <svg viewBox="0 0 48 32" width="48" height="32">
+                        <polygon points="10,2 46,2 38,30 2,30" fill="#9C27B0" stroke="#4a148c" stroke-width="1"/>
+                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="8" font-family="sans-serif">入出力</text>
+                    </svg>
+                    <span class="shape-tile-label">入出力</span>
+                </button>
+
+                <!-- データベース（シリンダー） -->
+                <button class="shape-tile" data-shape="cylinder" title="データベース">
+                    <svg viewBox="0 0 48 36" width="48" height="36">
+                        <rect x="4" y="8" width="40" height="20" fill="#F44336"/>
+                        <ellipse cx="24" cy="28" rx="20" ry="5" fill="#E57373"/>
+                        <ellipse cx="24" cy="8"  rx="20" ry="5" fill="#EF9A9A"/>
+                        <text x="24" y="19" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-family="sans-serif">デｰタベｰス</text>
+                    </svg>
+                    <span class="shape-tile-label">データベース</span>
+                </button>
+
+            </div><!-- #side-panel -->
+
+            <!-- キャンバス -->
+            <div id="canvas-wrap">
+                <svg id="canvas"></svg>
+            </div>
+
+        </div><!-- #main-area -->
 
         <!-- 選択エッジ操作パネル -->
         <div id="edge-panel" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()">
@@ -229,7 +366,6 @@
             // ===== アコーディオン初期化 =====
             const accordions = [
                 { triggerId: 'file-menu-trigger', menuId: 'file-menu' },
-                { triggerId: 'shape-menu-trigger', menuId: 'shape-menu' },
             ];
             accordions.forEach(({ triggerId, menuId }) => {
                 const trigger = document.getElementById(triggerId);
