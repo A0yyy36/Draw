@@ -38,21 +38,34 @@
             }
 
             /* ===== 左サイドパネル ===== */
+            #side-panel-wrapper {
+                display: flex;
+                flex-shrink: 0;
+                position: relative;
+            }
             #side-panel {
                 width: 72px;
+                min-width: 0px;
+                max-width: 300px;
                 background: #f4f5f7;
-                border-right: 1px solid #d0d3da;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 10px 0 16px;
-                gap: 2px;
+                display: grid;
+                grid-template-columns: repeat(1, 1fr);
+                align-content: start;
+                padding: 10px 4px 16px;
+                gap: 4px;
                 overflow-y: auto;
-                flex-shrink: 0;
+                overflow-x: hidden;
                 user-select: none;
+                transition: none;
             }
-
+            /* パネルが折りたたまれているとき */
+            #side-panel.collapsed {
+                width: 0 !important;
+                padding: 0;
+                overflow: hidden;
+            }
             .panel-section-label {
+                grid-column: 1 / -1;
                 font-size: 9px;
                 font-weight: 600;
                 letter-spacing: 0.06em;
@@ -64,6 +77,48 @@
             }
             .panel-section-label:first-child {
                 padding-top: 0;
+            }
+
+            /* リサイズハンドル */
+            #side-resize-handle {
+                width: 5px;
+                background: transparent;
+                cursor: col-resize;
+                flex-shrink: 0;
+                position: relative;
+                border-right: 1px solid #d0d3da;
+                transition: background 0.15s;
+                z-index: 20;
+            }
+            #side-resize-handle:hover,
+            #side-resize-handle.dragging {
+                background: rgba(74,124,220,0.25);
+                border-right-color: #4a7cdc;
+            }
+            /* 折りたたみトグルボタン */
+            #side-collapse-btn {
+                position: absolute;
+                top: 50%;
+                right: -10px;
+                transform: translateY(-50%);
+                width: 16px;
+                height: 36px;
+                background: #e8ecf5;
+                border: 1px solid #c0c8e0;
+                border-radius: 0 4px 4px 0;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 9px;
+                color: #555;
+                z-index: 21;
+                transition: background 0.13s;
+                user-select: none;
+            }
+            #side-collapse-btn:hover {
+                background: #cdd8f5;
+                color: #1a3f8f;
             }
 
             .panel-sep {
@@ -79,7 +134,7 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                width: 56px;
+                width: 100%;
                 padding: 6px 4px 4px;
                 background: transparent;
                 border: 1.5px solid transparent;
@@ -87,6 +142,7 @@
                 cursor: pointer;
                 transition: background 0.13s, border-color 0.13s, box-shadow 0.13s;
                 gap: 3px;
+                box-sizing: border-box;
             }
             .shape-tile:hover {
                 background: #e6eaf4;
@@ -201,7 +257,7 @@
                 display: none;
                 position: fixed;
                 bottom: 14px;
-                left: calc(72px + 50%);
+                left: calc(var(--side-w, 72px) + 5px + 50%);
                 transform: translateX(-50%);
                 background: #fff;
                 border: 1px solid #bbb;
@@ -283,14 +339,15 @@
         <div id="main-area">
 
             <!-- 左サイドパネル（図形パレット） -->
-            <div id="side-panel">
+            <div id="side-panel-wrapper">
+                <div id="side-panel">
                 <span class="panel-section-label">図形</span>
 
                 <!-- 処理（矩形） -->
                 <button class="shape-tile" data-shape="rect" title="処理">
                     <svg viewBox="0 0 48 32" width="48" height="32">
                         <rect x="3" y="3" width="42" height="26" rx="2" fill="#2196F3" stroke="#1565C0" stroke-width="1"/>
-                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-family="sans-serif">処理</text>
+                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-family="sans-serif"></text>
                     </svg>
                     <span class="shape-tile-label">処理</span>
                 </button>
@@ -299,7 +356,7 @@
                 <button class="shape-tile" data-shape="rounded" title="開始・終了">
                     <svg viewBox="0 0 48 32" width="48" height="32">
                         <rect x="3" y="3" width="42" height="26" rx="13" fill="#4CAF50" stroke="#2e7d32" stroke-width="1"/>
-                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="7.5" font-family="sans-serif">開始/終了</text>
+                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="7.5" font-family="sans-serif"></text>
                     </svg>
                     <span class="shape-tile-label">開始/終了</span>
                 </button>
@@ -308,7 +365,7 @@
                 <button class="shape-tile" data-shape="diamond" title="分岐・判断">
                     <svg viewBox="0 0 48 32" width="48" height="32">
                         <polygon points="24,2 46,16 24,30 2,16" fill="#FF9800" stroke="#e65100" stroke-width="1"/>
-                        <text x="24" y="16" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="8" font-family="sans-serif">分岐</text>
+                        <text x="24" y="16" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="8" font-family="sans-serif"></text>
                     </svg>
                     <span class="shape-tile-label">分岐/判断</span>
                 </button>
@@ -317,7 +374,7 @@
                 <button class="shape-tile" data-shape="parallelogram" title="入出力">
                     <svg viewBox="0 0 48 32" width="48" height="32">
                         <polygon points="10,2 46,2 38,30 2,30" fill="#9C27B0" stroke="#4a148c" stroke-width="1"/>
-                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="8" font-family="sans-serif">入出力</text>
+                        <text x="24" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="8" font-family="sans-serif"></text>
                     </svg>
                     <span class="shape-tile-label">入出力</span>
                 </button>
@@ -328,12 +385,16 @@
                         <rect x="4" y="8" width="40" height="20" fill="#F44336"/>
                         <ellipse cx="24" cy="28" rx="20" ry="5" fill="#E57373"/>
                         <ellipse cx="24" cy="8"  rx="20" ry="5" fill="#EF9A9A"/>
-                        <text x="24" y="19" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-family="sans-serif">デｰタベｰス</text>
+                        <text x="24" y="19" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-family="sans-serif"></text>
                     </svg>
                     <span class="shape-tile-label">データベース</span>
                 </button>
 
-            </div><!-- #side-panel -->
+                </div><!-- #side-panel -->
+                <div id="side-resize-handle">
+                    <div id="side-collapse-btn" title="折りたたむ/開く">◀</div>
+                </div>
+            </div><!-- #side-panel-wrapper -->
 
             <!-- キャンバス -->
             <div id="canvas-wrap">
@@ -388,6 +449,111 @@
                     document.getElementById(triggerId).classList.remove('open');
                 });
             });
+
+            // ===== サイドパネル リサイズ & 折りたたみ =====
+            (function() {
+                const panel      = document.getElementById('side-panel');
+                const handle     = document.getElementById('side-resize-handle');
+                const collapseBtn = document.getElementById('side-collapse-btn');
+                const edgePanel  = document.getElementById('edge-panel');
+                let dragging = false;
+                let startX   = 0;
+                let startW   = 0;
+                let collapsed = false;
+                let lastW    = 72; // 折りたたみ前の幅を記憶
+
+                let prevPanelW = 72;
+
+                function updateColumns(w) {
+                    // 64px未満=1列, 128px未満=2列, 192px未満=3列, 以降+64pxごとに+1列
+                    const cols = w < 64 ? 1 : Math.floor(w / 64);
+                    panel.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+                }
+
+                function setWidth(w) {
+                    w = Math.max(0, Math.min(300, w));
+                    const diff = w - prevPanelW;
+                    prevPanelW = w;
+                    panel.style.width = w + 'px';
+                    document.documentElement.style.setProperty('--side-w', w + 'px');
+                    updateColumns(w);
+                    // サイドバー幅変化分だけviewXを補正してキャンバス内容をずらさない
+                    if (typeof viewX !== 'undefined' && typeof applyTransform === 'function') {
+                        viewX -= diff;
+                        applyTransform();
+                    }
+                }
+
+                function updateCollapseBtn() {
+                    collapseBtn.textContent = collapsed ? '▶' : '◀';
+                    collapseBtn.title = collapsed ? '開く' : '折りたたむ';
+                }
+
+                // ドラッグ開始
+                handle.addEventListener('mousedown', (e) => {
+                    if (e.target === collapseBtn) return;
+                    dragging = true;
+                    startX   = e.clientX;
+                    startW   = panel.offsetWidth;
+                    handle.classList.add('dragging');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                    e.preventDefault();
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!dragging) return;
+                    const newW = startW + (e.clientX - startX);
+                    if (newW < 20) {
+                        // 完全に折りたたむ
+                        if (!collapsed) {
+                            lastW = startW || 72;
+                            collapsed = true;
+                            panel.classList.add('collapsed');
+                            setWidth(0);
+                            updateCollapseBtn();
+                        }
+                    } else {
+                        if (collapsed) {
+                            collapsed = false;
+                            panel.classList.remove('collapsed');
+                            updateCollapseBtn();
+                        }
+                        setWidth(newW);
+                        lastW = newW;
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    if (!dragging) return;
+                    dragging = false;
+                    handle.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                });
+
+                // 折りたたみボタン
+                collapseBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (collapsed) {
+                        collapsed = false;
+                        panel.classList.remove('collapsed');
+                        prevPanelW = 0;
+                        setWidth(lastW || 72);
+                    } else {
+                        lastW = panel.offsetWidth || 72;
+                        collapsed = true;
+                        panel.classList.add('collapsed');
+                        prevPanelW = lastW;
+                        setWidth(0);
+                    }
+                    updateCollapseBtn();
+                });
+
+                // 初期CSS変数を設定
+                document.documentElement.style.setProperty('--side-w', '72px');
+                updateColumns(72);
+            })();
         </script>
 
         <!-- 読み込み順序が依存関係を決定します。変更しないでください -->
