@@ -137,4 +137,48 @@ function getOrCreateMarkerStart(color) {
     return id;
 }
 
+// ===== スナップガイドライン =====
+// ノードドラッグ時に軸が揃ったときに表示する赤いガイドライン
+const snapGuideGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+snapGuideGroup.id = "snap-guide-group";
+snapGuideGroup.setAttribute("pointer-events", "none");
+svg.appendChild(snapGuideGroup);
+
+/**
+ * スナップガイドラインを更新する
+ * @param {Array<{type:'x'|'y', value:number}>} guides - 論理座標でのガイドライン
+ */
+function updateSnapGuides(guides) {
+    while (snapGuideGroup.firstChild) snapGuideGroup.removeChild(snapGuideGroup.firstChild);
+    if (!guides || guides.length === 0) return;
+
+    const svgW = svg.clientWidth  || 900;
+    const svgH = svg.clientHeight || 600;
+
+    guides.forEach(({ type, value }) => {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("stroke",           "#E53935");
+        line.setAttribute("stroke-width",     "1");
+        line.setAttribute("stroke-dasharray", "5,3");
+        line.setAttribute("opacity",          "0.85");
+
+        if (type === "x") {
+            // 垂直ライン（x座標が揃った）
+            const sx = value * viewScale + viewX;
+            line.setAttribute("x1", sx); line.setAttribute("y1", 0);
+            line.setAttribute("x2", sx); line.setAttribute("y2", svgH);
+        } else {
+            // 水平ライン（y座標が揃った）
+            const sy = value * viewScale + viewY;
+            line.setAttribute("x1", 0);    line.setAttribute("y1", sy);
+            line.setAttribute("x2", svgW); line.setAttribute("y2", sy);
+        }
+        snapGuideGroup.appendChild(line);
+    });
+}
+
+function clearSnapGuides() {
+    while (snapGuideGroup.firstChild) snapGuideGroup.removeChild(snapGuideGroup.firstChild);
+}
+
 applyTransform();
