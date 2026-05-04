@@ -41,7 +41,7 @@ let _justFinishedSelecting = false;
 const SEL_LONG_PRESS_MS    = 200;
 
 // ===== エッジ端スクロール =====
-const SNAP_THRESHOLD = 10;
+const SNAP_THRESHOLD = 5;
 const EDGE_MARGIN    = 60;
 const EDGE_SPEED     = 8;
 let edgeScrollRAF = null;

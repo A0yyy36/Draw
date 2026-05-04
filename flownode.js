@@ -213,24 +213,32 @@ function enableDrag(el, node) {
             });
         } else {
             node.x = newX; node.y = newY;
-            // スナップ
+            // スナップ＋ガイドライン
+            const guides = [];
             nodes.forEach(other => {
                 if (other === node) return;
+                // 中心X
                 const ncx = node.x + node.w / 2, ocx = other.x + other.w / 2;
-                if (Math.abs(ncx - ocx) < SNAP_THRESHOLD) node.x = ocx - node.w / 2;
+                if (Math.abs(ncx - ocx) < SNAP_THRESHOLD) { node.x = ocx - node.w / 2; guides.push({ type: "x", value: ocx }); }
+                // 中心Y
                 const ncy = node.y + node.h / 2, ocy = other.y + other.h / 2;
-                if (Math.abs(ncy - ocy) < SNAP_THRESHOLD) node.y = ocy - node.h / 2;
-                if (Math.abs(node.x - other.x)                        < SNAP_THRESHOLD) node.x = other.x;
-                if (Math.abs((node.x + node.w) - (other.x + other.w)) < SNAP_THRESHOLD) node.x = other.x + other.w - node.w;
-                if (Math.abs(node.y - other.y)                        < SNAP_THRESHOLD) node.y = other.y;
-                if (Math.abs((node.y + node.h) - (other.y + other.h)) < SNAP_THRESHOLD) node.y = other.y + other.h - node.h;
+                if (Math.abs(ncy - ocy) < SNAP_THRESHOLD) { node.y = ocy - node.h / 2; guides.push({ type: "y", value: ocy }); }
+                // 左端
+                if (Math.abs(node.x - other.x) < SNAP_THRESHOLD) { node.x = other.x; guides.push({ type: "x", value: other.x }); }
+                // 右端
+                if (Math.abs((node.x + node.w) - (other.x + other.w)) < SNAP_THRESHOLD) { node.x = other.x + other.w - node.w; guides.push({ type: "x", value: other.x + other.w }); }
+                // 上端
+                if (Math.abs(node.y - other.y) < SNAP_THRESHOLD) { node.y = other.y; guides.push({ type: "y", value: other.y }); }
+                // 下端
+                if (Math.abs((node.y + node.h) - (other.y + other.h)) < SNAP_THRESHOLD) { node.y = other.y + other.h - node.h; guides.push({ type: "y", value: other.y + other.h }); }
             });
+            updateSnapGuides(guides);
             updateNodePosition(node);
         }
     });
 
     window.addEventListener("mouseup", () => {
-        if (dragging) { anyDragging = false; stopEdgeScroll(); }
+        if (dragging) { anyDragging = false; stopEdgeScroll(); clearSnapGuides(); }
         dragging = false; groupOffsets = [];
     });
 }

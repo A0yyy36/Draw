@@ -191,7 +191,7 @@ function getNodeConnectPoints(n) {
 }
 
 function snapFreePoint(px, py) {
-    // --- 優先度1: 接続点への2Dスナップ ---
+    // 接続点（ノードの上下左右の辺中央）への2Dスナップのみ
     let bestDist = CONNPT_SNAP + 1;
     let snapX = null, snapY = null;
 
@@ -211,29 +211,7 @@ function snapFreePoint(px, py) {
         return { x: snapX, y: snapY };
     }
 
-    // --- 優先度2: 格子候補へのX・Y軸独立スナップ ---
-    let sx = px, sy = py;
-    let bestDX = FREE_SNAP + 1, bestDY = FREE_SNAP + 1;
-
-    nodes.forEach(n => {
-        const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
-        const xCandidates = [n.x, cx, n.x + n.w];
-        const yCandidates = [n.y, cy, n.y + n.h];
-
-        xCandidates.forEach(xc => {
-            const d = Math.abs(px - xc);
-            if (d < bestDX) { bestDX = d; sx = xc; }
-        });
-        yCandidates.forEach(yc => {
-            const d = Math.abs(py - yc);
-            if (d < bestDY) { bestDY = d; sy = yc; }
-        });
-    });
-
-    return {
-        x: bestDX < FREE_SNAP ? sx : px,
-        y: bestDY < FREE_SNAP ? sy : py,
-    };
+    return { x: px, y: py };
 }
 
 // ===== フリーエッジ 端点ハンドル =====
