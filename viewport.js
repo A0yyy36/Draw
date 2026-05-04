@@ -69,21 +69,37 @@ window.addEventListener("mousemove", (e) => {
 
     // フリーエッジ 端点ハンドルドラッグ
     if (freeEdgeDragging && freeEdgeDragEdge) {
-        const lp = screenToLogical(e.clientX, e.clientY);
-        freeEdgeDragEdge[freeEdgeDragEndpt].x = lp.x;
-        freeEdgeDragEdge[freeEdgeDragEndpt].y = lp.y;
+        const lp      = screenToLogical(e.clientX, e.clientY);
+        const snapped = snapFreePoint(lp.x, lp.y);
+        freeEdgeDragEdge[freeEdgeDragEndpt].x = snapped.x;
+        freeEdgeDragEdge[freeEdgeDragEndpt].y = snapped.y;
         updateEdgePath(freeEdgeDragEdge);
         updateFreeEdgeHandles(freeEdgeDragEdge);
     }
 
     // フリーエッジ 本体ドラッグ（全体移動）
     if (freeEdgeBodyDrag && freeEdgeBodyEdge) {
-        const dx = (e.clientX - freeEdgeBodyStartMX) / viewScale;
-        const dy = (e.clientY - freeEdgeBodyStartMY) / viewScale;
-        freeEdgeBodyEdge.a.x = freeEdgeBodyStartAX + dx;
-        freeEdgeBodyEdge.a.y = freeEdgeBodyStartAY + dy;
-        freeEdgeBodyEdge.b.x = freeEdgeBodyStartBX + dx;
-        freeEdgeBodyEdge.b.y = freeEdgeBodyStartBY + dy;
+        const dx  = (e.clientX - freeEdgeBodyStartMX) / viewScale;
+        const dy  = (e.clientY - freeEdgeBodyStartMY) / viewScale;
+        let ax = freeEdgeBodyStartAX + dx;
+        let ay = freeEdgeBodyStartAY + dy;
+        let bx = freeEdgeBodyStartBX + dx;
+        let by = freeEdgeBodyStartBY + dy;
+
+        // 両端点でスナップ試行し、より近い方の補正量を全体に適用（軸独立）
+        const sa = snapFreePoint(ax, ay);
+        const sb = snapFreePoint(bx, by);
+        const dxa = sa.x - ax, dya = sa.y - ay;
+        const dxb = sb.x - bx, dyb = sb.y - by;
+
+        // X軸：A・B のうち引力が強い方を採用
+        const snapDX = Math.abs(dxa) <= Math.abs(dxb) ? dxa : dxb;
+        const snapDY = Math.abs(dya) <= Math.abs(dyb) ? dya : dyb;
+
+        freeEdgeBodyEdge.a.x = ax + snapDX;
+        freeEdgeBodyEdge.a.y = ay + snapDY;
+        freeEdgeBodyEdge.b.x = bx + snapDX;
+        freeEdgeBodyEdge.b.y = by + snapDY;
         updateEdgePath(freeEdgeBodyEdge);
         updateFreeEdgeHandles(freeEdgeBodyEdge);
     }

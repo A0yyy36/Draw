@@ -173,6 +173,38 @@ function makeFreePoint(x, y) {
     return { x, y, _isFreePoint: true };
 }
 
+// ===== フリーエッジ端点スナップ =====
+// 各ノードのスナップ候補点（中心・辺の中点・四隅）に対して
+// X軸・Y軸を独立に判定するが、同一ノードの候補点からセットで選ぶ。
+const FREE_SNAP = SNAP_THRESHOLD * 2;
+
+function snapFreePoint(px, py) {
+    let sx = px, sy = py;
+    let bestDX = FREE_SNAP + 1, bestDY = FREE_SNAP + 1;
+
+    nodes.forEach(n => {
+        const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+        // このノードのX候補・Y候補
+        const xCandidates = [n.x, cx, n.x + n.w];
+        const yCandidates = [n.y, cy, n.y + n.h];
+
+        xCandidates.forEach(xc => {
+            const d = Math.abs(px - xc);
+            if (d < bestDX) { bestDX = d; sx = xc; }
+        });
+        yCandidates.forEach(yc => {
+            const d = Math.abs(py - yc);
+            if (d < bestDY) { bestDY = d; sy = yc; }
+        });
+    });
+
+    // スナップが効いた軸だけ適用（閾値外はそのまま）
+    return {
+        x: bestDX < FREE_SNAP ? sx : px,
+        y: bestDY < FREE_SNAP ? sy : py,
+    };
+}
+
 // ===== フリーエッジ 端点ハンドル =====
 function showFreeEdgeHandles(edge) {
     hideFreeEdgeHandles(edge);
