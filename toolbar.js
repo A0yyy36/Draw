@@ -58,7 +58,64 @@ edgeWidthSlider.addEventListener("input", () => {
     if (selectedEdge) { selectedEdge.width = globalWidth; applyEdgeStyle(selectedEdge); }
 });
 
-// ===== 図形追加・保存ボタン =====
+// ===== 矢印タイル：クリック→キャンバス中央に追加 ／ ドラッグ→ノード接続モード =====
+document.querySelectorAll(".arrow-tile").forEach(tile => {
+    let tileMouseDownPos = null;
+    const DRAG_THRESHOLD = 6; // px
+
+    tile.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        tileMouseDownPos = { x: e.clientX, y: e.clientY };
+        e.preventDefault();
+    });
+
+    // mousemove で閾値を超えたらドラッグモード開始
+    const onTileMouseMove = (e) => {
+        if (!tileMouseDownPos) return;
+        const dx = e.clientX - tileMouseDownPos.x;
+        const dy = e.clientY - tileMouseDownPos.y;
+        if (dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) {
+            // ドラッグ開始
+            const preset = tile.dataset.arrowPreset;
+            if (preset) { globalArrow = preset; setGroupActive("arrow", globalArrow); }
+            cancelArrowConnect();
+            arrowTileDragging = true;
+            svg.style.cursor = "crosshair";
+            tileMouseDownPos = null;
+            window.removeEventListener("mousemove", onTileMouseMove);
+        }
+    };
+    window.addEventListener("mousemove", onTileMouseMove);
+
+    tile.addEventListener("click", (e) => {
+        e.stopPropagation();
+        // ドラッグ中だった場合はクリック扱いしない
+        if (arrowTileDragging) return;
+
+        const preset = tile.dataset.arrowPreset;
+        if (preset) { globalArrow = preset; setGroupActive("arrow", globalArrow); }
+
+        const svgRect = svg.getBoundingClientRect();
+        const cx = (svgRect.width  / 2 - viewX) / viewScale;
+        const cy = (svgRect.height / 2 - viewY) / viewScale;
+        const freeCount = edges.filter(ed => ed.isFree).length;
+        const offsetX = 80;
+        const offsetY = freeCount * 14; // 少しずつずらして重ならないように
+        const a = makeFreePoint(cx - offsetX, cy + offsetY);
+        const b = makeFreePoint(cx + offsetX, cy + offsetY);
+
+        const edge = createEdge(a, b, {
+            style:  globalEdgeStyle,
+            arrow:  globalArrow,
+            dash:   globalDash,
+            color:  globalColor,
+            width:  globalWidth,
+        });
+        selectEdge(edge);
+    });
+
+    tile.addEventListener("mouseup", () => { tileMouseDownPos = null; });
+});
 document.querySelectorAll("button[data-shape]").forEach(btn => {
     btn.addEventListener("click", () => {
         const shape = btn.dataset.shape;

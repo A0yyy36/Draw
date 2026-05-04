@@ -16,8 +16,13 @@ function saveFlowchart() {
             shape:   n.shape,
         })),
         edges: edges.map(e => ({
-            aId:    e.a.id,
-            bId:    e.b.id,
+            aId:    e.isFree ? null : e.a.id,
+            bId:    e.isFree ? null : e.b.id,
+            isFree: e.isFree || false,
+            ax:     e.isFree ? e.a.x : undefined,
+            ay:     e.isFree ? e.a.y : undefined,
+            bx:     e.isFree ? e.b.x : undefined,
+            by:     e.isFree ? e.b.y : undefined,
             style:  e.style,
             arrow:  e.arrow,
             dash:   e.dash,
@@ -65,9 +70,15 @@ function loadFlowchart(jsonData) {
 
     // エッジ復元
     jsonData.edges.forEach(ed => {
-        const a = nodes.find(n => n.id === ed.aId);
-        const b = nodes.find(n => n.id === ed.bId);
-        if (!a || !b) return;
+        let a, b;
+        if (ed.isFree) {
+            a = makeFreePoint(ed.ax, ed.ay);
+            b = makeFreePoint(ed.bx, ed.by);
+        } else {
+            a = nodes.find(n => n.id === ed.aId);
+            b = nodes.find(n => n.id === ed.bId);
+            if (!a || !b) return;
+        }
         createEdge(a, b, {
             style:  ed.style  || "straight",
             arrow:  ed.arrow  || "end",

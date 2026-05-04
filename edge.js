@@ -3,11 +3,15 @@
 // エッジ選択パネルの操作を担当します。
 
 // ===== パス計算ユーティリティ =====
+// ノードオブジェクト、または {x, y}（フリーエッジの端点座標）を受け付ける
 function getNodeCenter(n) {
+    if (n._isFreePoint) return { x: n.x, y: n.y };
     return { x: n.x + n.w / 2, y: n.y + n.h / 2 };
 }
 
 function getEdgePoint(n, tx, ty) {
+    // フリーエッジ端点はそのまま座標を返す
+    if (n._isFreePoint) return { x: n.x, y: n.y };
     const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
     const dx = tx - cx, dy = ty - cy;
     if (dx === 0 && dy === 0) return { x: cx, y: cy };
@@ -104,6 +108,7 @@ function selectEdge(edge) {
     if (selectedEdge && selectedEdge !== edge) {
         highlightEdge(selectedEdge, false);
         hideCPDot(selectedEdge);
+        hideFreeEdgeHandles(selectedEdge);
     }
     // ノード選択をクリア
     if (selectedNode) { highlight(selectedNode, false); selectedNode = null; }
@@ -114,6 +119,8 @@ function selectEdge(edge) {
     selectedEdge = edge;
     highlightEdge(edge, true);
     if (edge.style === "bezier" || edge.style === "orthogonal") showCPDot(edge);
+    // フリーエッジなら端点ハンドルを表示
+    if (edge.isFree) showFreeEdgeHandles(edge);
     const panel = document.getElementById("edge-panel");
     if (panel) {
         panel.classList.add("visible");
@@ -161,6 +168,72 @@ function hideCPDot(edge) {
     if (edge && edge.cpDotEl) { edge.cpDotEl.remove(); edge.cpDotEl = null; }
 }
 
+// ===== フリーエッジ ユーティリティ =====
+function makeFreePoint(x, y) {
+    return { x, y, _isFreePoint: true };
+}
+
+// ===== フリーエッジ 端点ハンドル =====
+function showFreeEdgeHandles(edge) {
+    hideFreeEdgeHandles(edge);
+    edge._epHandles = {};
+    ["a", "b"].forEach(which => {
+        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        dot.setAttribute("r",            7 / viewScale);
+        dot.setAttribute("fill",         which === "a" ? "#43a047" : "#e53935");
+        dot.setAttribute("stroke",       "#fff");
+        dot.setAttribute("stroke-width", 1.5 / viewScale);
+        dot.style.cursor = "move";
+        const pt = edge[which];
+        dot.setAttribute("cx", pt.x);
+        dot.setAttribute("cy", pt.y);
+        nodeGroup.appendChild(dot);
+        edge._epHandles[which] = dot;
+
+        dot.addEventListener("mousedown", (e) => {
+            e.stopPropagation();
+            freeEdgeDragging  = true;
+            freeEdgeDragEdge  = edge;
+            freeEdgeDragEndpt = which;
+        });
+    });
+}
+
+function updateFreeEdgeHandles(edge) {
+    if (!edge._epHandles) return;
+    ["a", "b"].forEach(which => {
+        const dot = edge._epHandles[which];
+        if (!dot) return;
+        const pt = edge[which];
+        dot.setAttribute("cx",           pt.x);
+        dot.setAttribute("cy",           pt.y);
+        dot.setAttribute("r",            7   / viewScale);
+        dot.setAttribute("stroke-width", 1.5 / viewScale);
+    });
+}
+
+function hideFreeEdgeHandles(edge) {
+    if (!edge || !edge._epHandles) return;
+    Object.values(edge._epHandles).forEach(d => d && d.remove());
+    edge._epHandles = null;
+}
+
+// ===== フリーエッジ 本体ドラッグ有効化 =====
+function enableFreeEdgeBodyDrag(edge) {
+    edge.hitEl.addEventListener("mousedown", (e) => {
+        if (!edge.isFree) return;
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        freeEdgeBodyDrag    = true;
+        freeEdgeBodyEdge    = edge;
+        freeEdgeBodyStartMX = e.clientX;
+        freeEdgeBodyStartMY = e.clientY;
+        freeEdgeBodyStartAX = edge.a.x; freeEdgeBodyStartAY = edge.a.y;
+        freeEdgeBodyStartBX = edge.b.x; freeEdgeBodyStartBY = edge.b.y;
+        selectEdge(edge);
+    });
+}
+
 function updateBezierHandle(e) {
     if (!bezierDragging || !bezierEdge) return;
     bezierEdge.cpOffX = bezierStartCPX + (e.clientX - bezierStartMX) / viewScale;
@@ -181,8 +254,11 @@ function createEdge(a, b, opts = {}) {
     edgeGroup.appendChild(pathEl);
     edgeGroup.appendChild(hitEl);
 
+    const isFree = !!(a._isFreePoint || b._isFreePoint);
+
     const edge = {
         a, b, pathEl, hitEl,
+        isFree,
         style:  opts.style  ?? globalEdgeStyle,
         arrow:  opts.arrow  ?? globalArrow,
         dash:   opts.dash   ?? globalDash,
@@ -191,14 +267,21 @@ function createEdge(a, b, opts = {}) {
         cpOffX: opts.cpOffX ?? 0,
         cpOffY: opts.cpOffY ?? 0,
         cpDotEl: null,
+        _epHandles: null,
     };
     edges.push(edge);
     applyEdgeStyle(edge);
     updateEdgePath(edge);
 
+    if (isFree) {
+        hitEl.style.cursor = "move";
+        enableFreeEdgeBodyDrag(edge);
+    }
+
     hitEl.addEventListener("click", (e) => {
         e.stopPropagation();
         if (isPanning || isSelecting) return;
+        if (freeEdgeBodyDrag) return; // ドラッグ後のクリックを無視
         if (selectedEdge === edge) return;
         selectEdge(edge);
     });
@@ -254,6 +337,7 @@ document.getElementById("ep-delete").addEventListener("click", () => {
         selectedEdge.pathEl.remove();
         selectedEdge.hitEl.remove();
         hideCPDot(selectedEdge);
+        hideFreeEdgeHandles(selectedEdge);
         edges.splice(idx, 1);
         selectedEdge = null;
         document.getElementById("edge-panel").classList.remove("visible");

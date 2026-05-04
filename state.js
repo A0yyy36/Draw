@@ -57,3 +57,21 @@ let bezierStartMX, bezierStartMY, bezierStartCPX, bezierStartCPY;
 // ===== リサイズ最小サイズ =====
 const MIN_W = 40;
 const MIN_H = 30;
+
+// ===== フリーエッジ（独立矢印）端点ドラッグ =====
+let freeEdgeDragging    = false; // 端点ハンドルをドラッグ中
+let freeEdgeDragEdge    = null;  // 対象エッジ
+let freeEdgeDragEndpt   = null;  // "a" | "b"
+let freeEdgeBodyDrag    = false; // 本体ドラッグ中
+let freeEdgeBodyEdge    = null;
+let freeEdgeBodyStartMX = 0, freeEdgeBodyStartMY = 0;
+let freeEdgeBodyStartAX = 0, freeEdgeBodyStartAY = 0;
+let freeEdgeBodyStartBX = 0, freeEdgeBodyStartBY = 0;
+
+// ===== 矢印タイル接続待ち状態 =====
+// arrowConnectPending: { arrow, style, dash } | null
+let arrowConnectPending = null;
+// 接続待ちのプレビュー線（SVGパス）
+let arrowPreviewEl = null;
+// ドラッグ中かどうか（サイドパネル→キャンバス）
+let arrowTileDragging = false;

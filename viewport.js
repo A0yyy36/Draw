@@ -18,6 +18,9 @@ window.addEventListener("keyup", (e) => {
 
 // ===== SVG mousedown（パン開始 / 矩形選択開始）=====
 svg.addEventListener("mousedown", (e) => {
+    // 矢印タイルドラッグ中はSVG側のマウスダウン処理をスキップ
+    if (arrowTileDragging) return;
+
     const onBackground =
         e.target === svg       || e.target === mainGroup ||
         e.target === gridGroup || e.target === edgeGroup ||
@@ -42,7 +45,7 @@ svg.addEventListener("mousedown", (e) => {
     }
 });
 
-// ===== mousemove（パン / 矩形選択更新 / ベジェドラッグ）=====
+// ===== mousemove（パン / 矩形選択更新 / ベジェドラッグ / 矢印プレビュー）=====
 window.addEventListener("mousemove", (e) => {
     if (isPanning) {
         viewX = panStart.vx + (e.clientX - panStart.mx);
@@ -63,6 +66,61 @@ window.addEventListener("mousemove", (e) => {
     }
     if (isSelecting)    updateSelectionBox(e);
     if (bezierDragging) updateBezierHandle(e);
+
+    // フリーエッジ 端点ハンドルドラッグ
+    if (freeEdgeDragging && freeEdgeDragEdge) {
+        const lp = screenToLogical(e.clientX, e.clientY);
+        freeEdgeDragEdge[freeEdgeDragEndpt].x = lp.x;
+        freeEdgeDragEdge[freeEdgeDragEndpt].y = lp.y;
+        updateEdgePath(freeEdgeDragEdge);
+        updateFreeEdgeHandles(freeEdgeDragEdge);
+    }
+
+    // フリーエッジ 本体ドラッグ（全体移動）
+    if (freeEdgeBodyDrag && freeEdgeBodyEdge) {
+        const dx = (e.clientX - freeEdgeBodyStartMX) / viewScale;
+        const dy = (e.clientY - freeEdgeBodyStartMY) / viewScale;
+        freeEdgeBodyEdge.a.x = freeEdgeBodyStartAX + dx;
+        freeEdgeBodyEdge.a.y = freeEdgeBodyStartAY + dy;
+        freeEdgeBodyEdge.b.x = freeEdgeBodyStartBX + dx;
+        freeEdgeBodyEdge.b.y = freeEdgeBodyStartBY + dy;
+        updateEdgePath(freeEdgeBodyEdge);
+        updateFreeEdgeHandles(freeEdgeBodyEdge);
+    }
+
+    // 矢印タイルドラッグ中：プレビュー線を描画
+    if (arrowTileDragging) {
+        const lp = screenToLogical(e.clientX, e.clientY);
+        if (!arrowPreviewEl) {
+            arrowPreviewEl = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            arrowPreviewEl.setAttribute("stroke",           "#1976D2");
+            arrowPreviewEl.setAttribute("stroke-width",     "2");
+            arrowPreviewEl.setAttribute("stroke-dasharray", "6,4");
+            arrowPreviewEl.setAttribute("pointer-events",   "none");
+            edgeGroup.appendChild(arrowPreviewEl);
+            arrowPreviewEl._startLP = lp;
+        }
+        const s = arrowPreviewEl._startLP;
+        arrowPreviewEl.setAttribute("x1", s.x); arrowPreviewEl.setAttribute("y1", s.y);
+        arrowPreviewEl.setAttribute("x2", lp.x); arrowPreviewEl.setAttribute("y2", lp.y);
+    }
+
+    // 矢印接続待ち中：マウス位置からプレビュー線を始点ノードから引く
+    if (arrowConnectPending && !arrowTileDragging) {
+        const lp  = screenToLogical(e.clientX, e.clientY);
+        const src = arrowConnectPending.node;
+        const cx  = src.x + src.w / 2, cy = src.y + src.h / 2;
+        if (!arrowPreviewEl) {
+            arrowPreviewEl = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            arrowPreviewEl.setAttribute("stroke",           "#1976D2");
+            arrowPreviewEl.setAttribute("stroke-width",     "2");
+            arrowPreviewEl.setAttribute("stroke-dasharray", "6,4");
+            arrowPreviewEl.setAttribute("pointer-events",   "none");
+            edgeGroup.appendChild(arrowPreviewEl);
+        }
+        arrowPreviewEl.setAttribute("x1", cx); arrowPreviewEl.setAttribute("y1", cy);
+        arrowPreviewEl.setAttribute("x2", lp.x); arrowPreviewEl.setAttribute("y2", lp.y);
+    }
 });
 
 // ===== mouseup（パン終了 / 矩形選択終了）=====
@@ -82,6 +140,28 @@ window.addEventListener("mouseup", (e) => {
         svg.style.cursor = "";
     }
     if (bezierDragging) { bezierDragging = false; }
+
+    // フリーエッジ 端点ハンドルドラッグ終了
+    if (freeEdgeDragging) {
+        freeEdgeDragging  = false;
+        freeEdgeDragEdge  = null;
+        freeEdgeDragEndpt = null;
+    }
+
+    // フリーエッジ 本体ドラッグ終了
+    if (freeEdgeBodyDrag) {
+        freeEdgeBodyDrag = false;
+        freeEdgeBodyEdge = null;
+    }
+
+    // 矢印タイルドラッグ：ノード以外でドロップ→キャンセル
+    if (arrowTileDragging) {
+        // enableConnect の mouseup でノード上ならすでに処理済み
+        // ここに来たということはノード外でドロップ → キャンセル
+        cancelArrowPreview();
+        arrowTileDragging = false;
+        svg.style.cursor = "";
+    }
 });
 
 // ===== ホイール（ズーム / パン）=====
@@ -159,6 +239,11 @@ svg.addEventListener("click", (e) => {
     const t = e.target;
     if (t === svg || t === mainGroup || t === edgeGroup ||
         t === nodeGroup || t === gridGroup || t.closest?.("#grid-group")) {
-        clearSelection();
+        // 矢印接続待ち中なら接続待ちをキャンセル、そうでなければ通常の選択クリア
+        if (arrowConnectPending) {
+            cancelArrowConnect();
+        } else {
+            clearSelection();
+        }
     }
 });

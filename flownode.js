@@ -136,10 +136,18 @@ function clearSelection() {
     if (selectedEdge) {
         highlightEdge(selectedEdge, false);
         hideCPDot(selectedEdge);
+        hideFreeEdgeHandles(selectedEdge);
         selectedEdge = null;
     }
     const panel = document.getElementById("edge-panel");
     if (panel) panel.classList.remove("visible");
+    // 矢印接続待ちもクリア
+    if (arrowConnectPending) {
+        highlight(arrowConnectPending.node, false);
+        arrowConnectPending = null;
+        svg.style.cursor = "";
+    }
+    cancelArrowPreview();
 }
 
 // ===== ドラッグ（複数選択対応）=====
@@ -309,6 +317,13 @@ function deleteNode(node) {
 // ===== キーボード削除 =====
 window.addEventListener("keydown", (e) => {
     if (document.getElementById("node-input")) return;
+    // Escapeで矢印接続待ちキャンセル
+    if (e.key === "Escape") {
+        if (arrowConnectPending || arrowTileDragging) {
+            cancelArrowConnect();
+            return;
+        }
+    }
     if (e.key === "Backspace") {
         if (selectedEdge) {
             document.getElementById("ep-delete").click();
@@ -411,9 +426,46 @@ window.addEventListener("mouseup", () => {
 
 // ===== 接続（クリックで2ノード選択→エッジ生成）=====
 function enableConnect(el, node) {
+    // ===== 矢印タイルのドロップ先（始点）=====
+    el.addEventListener("mouseup", (e) => {
+        if (!arrowTileDragging) return;
+        e.stopPropagation();
+        // ドラッグがこのノードの上で終わった → 始点として接続待ち状態へ
+        cancelArrowPreview();
+        arrowTileDragging = false;
+        arrowConnectPending = { node };
+        highlight(node, true);
+        showResizeHandles(node);
+        // カーソルをクロスに変えてユーザーに待ち状態を示す
+        svg.style.cursor = "crosshair";
+        // ヒントバナーを表示
+        document.getElementById("arrow-hint-banner").style.display = "block";
+    });
+
     el.addEventListener("click", (e) => {
         e.stopPropagation();
         if (isPanning || isSelecting) return;
+
+        // ===== 矢印タイル接続待ち：このノードが終点 =====
+        if (arrowConnectPending) {
+            const srcNode = arrowConnectPending.node;
+            if (srcNode !== node) {
+                createEdge(srcNode, node, {
+                    style:  globalEdgeStyle,
+                    arrow:  globalArrow,
+                    dash:   globalDash,
+                    color:  globalColor,
+                    width:  globalWidth,
+                });
+            }
+            highlight(srcNode, false);
+            hideResizeHandles();
+            arrowConnectPending = null;
+            cancelArrowPreview();
+            svg.style.cursor = "";
+            document.getElementById("arrow-hint-banner").style.display = "none";
+            return;
+        }
 
         // エッジ選択を解除
         if (selectedEdge) {
@@ -445,4 +497,23 @@ function enableConnect(el, node) {
             selectedNode = null;
         }
     });
+}
+
+// ===== 矢印タイルドラッグ中のプレビュー線を消す =====
+function cancelArrowPreview() {
+    if (arrowPreviewEl) { arrowPreviewEl.remove(); arrowPreviewEl = null; }
+}
+
+// ===== 接続待ち状態のキャンセル（背景クリック等） =====
+function cancelArrowConnect() {
+    if (arrowConnectPending) {
+        highlight(arrowConnectPending.node, false);
+        hideResizeHandles();
+        arrowConnectPending = null;
+    }
+    cancelArrowPreview();
+    arrowTileDragging = false;
+    svg.style.cursor = "";
+    const banner = document.getElementById("arrow-hint-banner");
+    if (banner) banner.style.display = "none";
 }

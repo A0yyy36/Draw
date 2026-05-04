@@ -390,6 +390,47 @@
                     <span class="shape-tile-label">データベース</span>
                 </button>
 
+                <div class="panel-sep"></div>
+                <span class="panel-section-label">矢印</span>
+
+                <!-- 片方矢印（終点） -->
+                <div class="shape-tile arrow-tile" data-arrow-preset="end" title="矢印（片方）をドラッグして始点ノードへ">
+                    <svg viewBox="0 0 48 32" width="48" height="32">
+                        <defs>
+                            <marker id="tile-arrow-end" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                <polygon points="0 0, 8 3, 0 6" fill="#444"/>
+                            </marker>
+                        </defs>
+                        <line x1="6" y1="16" x2="38" y2="16" stroke="#444" stroke-width="2" marker-end="url(#tile-arrow-end)"/>
+                    </svg>
+                    <span class="shape-tile-label">片方</span>
+                </div>
+
+                <!-- 両方矢印 -->
+                <div class="shape-tile arrow-tile" data-arrow-preset="both" title="矢印（両方）をドラッグして始点ノードへ">
+                    <svg viewBox="0 0 48 32" width="48" height="32">
+                        <defs>
+                            <marker id="tile-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
+                                <polygon points="8 0, 0 3, 8 6" fill="#444"/>
+                            </marker>
+                            <marker id="tile-arrow-end2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                <polygon points="0 0, 8 3, 0 6" fill="#444"/>
+                            </marker>
+                        </defs>
+                        <line x1="6" y1="16" x2="38" y2="16" stroke="#444" stroke-width="2"
+                              marker-start="url(#tile-arrow-start)" marker-end="url(#tile-arrow-end2)"/>
+                    </svg>
+                    <span class="shape-tile-label">両方</span>
+                </div>
+
+                <!-- 線（矢印なし） -->
+                <div class="shape-tile arrow-tile" data-arrow-preset="none" title="線（矢印なし）をドラッグして始点ノードへ">
+                    <svg viewBox="0 0 48 32" width="48" height="32">
+                        <line x1="6" y1="16" x2="42" y2="16" stroke="#444" stroke-width="2"/>
+                    </svg>
+                    <span class="shape-tile-label">線</span>
+                </div>
+
                 </div><!-- #side-panel -->
                 <div id="side-resize-handle">
                     <div id="side-collapse-btn" title="折りたたむ/開く">◀</div>
@@ -402,6 +443,21 @@
             </div>
 
         </div><!-- #main-area -->
+
+        <!-- 矢印接続待ちヒントバナー -->
+        <div id="arrow-hint-banner" style="
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: #1976D2;
+            color: #fff;
+            text-align: center;
+            font-size: 13px;
+            padding: 5px;
+            z-index: 500;
+            pointer-events: none;
+            letter-spacing: 0.03em;
+        ">終点ノードをクリックして接続 ／ Esc でキャンセル</div>
 
         <!-- 選択エッジ操作パネル -->
         <div id="edge-panel" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()">
