@@ -58,6 +58,10 @@ let bezierStartMX, bezierStartMY, bezierStartCPX, bezierStartCPY;
 const MIN_W = 40;
 const MIN_H = 30;
 
+// ===== 矢印の水平・垂直スナップ =====
+// この角度（度）以内なら水平または垂直にスナップする
+const AXIS_SNAP_DEG = 8;
+
 // ===== フリーエッジ（独立矢印）端点ドラッグ =====
 let freeEdgeDragging    = false; // 端点ハンドルをドラッグ中
 let freeEdgeDragEdge    = null;  // 対象エッジ

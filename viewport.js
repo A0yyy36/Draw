@@ -71,10 +71,30 @@ window.addEventListener("mousemove", (e) => {
     if (freeEdgeDragging && freeEdgeDragEdge) {
         const lp      = screenToLogical(e.clientX, e.clientY);
         const snapped = snapFreePoint(lp.x, lp.y);
+
+        // 水平・垂直スナップ：もう一方の端点との角度を見て軸にスナップ
+        const otherEndpt = freeEdgeDragEndpt === "a" ? "b" : "a";
+        const other = freeEdgeDragEdge[otherEndpt];
+        const dx = snapped.x - other.x;
+        const dy = snapped.y - other.y;
+        if (dx !== 0 || dy !== 0) {
+            const angleDeg = Math.abs(Math.atan2(dy, dx) * 180 / Math.PI);
+            const thresh   = AXIS_SNAP_DEG;
+            // 水平（0°または180°に近い）
+            if (angleDeg < thresh || angleDeg > 180 - thresh) {
+                snapped.y = other.y;
+            }
+            // 垂直（90°に近い）
+            else if (angleDeg > 90 - thresh && angleDeg < 90 + thresh) {
+                snapped.x = other.x;
+            }
+        }
+
         freeEdgeDragEdge[freeEdgeDragEndpt].x = snapped.x;
         freeEdgeDragEdge[freeEdgeDragEndpt].y = snapped.y;
         updateEdgePath(freeEdgeDragEdge);
         updateFreeEdgeHandles(freeEdgeDragEdge);
+        updateSnapHighlight(lp.x, lp.y);
     }
 
     // フリーエッジ 本体ドラッグ（全体移動）
@@ -162,6 +182,7 @@ window.addEventListener("mouseup", (e) => {
         freeEdgeDragging  = false;
         freeEdgeDragEdge  = null;
         freeEdgeDragEndpt = null;
+        clearSnapHighlight();
     }
 
     // フリーエッジ 本体ドラッグ終了

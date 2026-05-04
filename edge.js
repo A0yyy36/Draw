@@ -174,17 +174,49 @@ function makeFreePoint(x, y) {
 }
 
 // ===== フリーエッジ端点スナップ =====
-// 各ノードのスナップ候補点（中心・辺の中点・四隅）に対して
-// X軸・Y軸を独立に判定するが、同一ノードの候補点からセットで選ぶ。
-const FREE_SNAP = SNAP_THRESHOLD * 2;
+// 優先度1: ノードの接続点（上下左右の辺中央）へ2D距離でスナップ
+// 優先度2: ノードの格子候補（辺・中心）へX軸・Y軸独立スナップ
+const FREE_SNAP      = SNAP_THRESHOLD * 2;   // 軸独立スナップ閾値
+const CONNPT_SNAP    = SNAP_THRESHOLD * 4;   // 接続点スナップ閾値（広め）
+
+// 各ノードの接続点（上下左右の辺中央）を返す
+function getNodeConnectPoints(n) {
+    const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+    return [
+        { x: cx,        y: n.y      },   // 上
+        { x: cx,        y: n.y + n.h },  // 下
+        { x: n.x,       y: cy       },   // 左
+        { x: n.x + n.w, y: cy       },   // 右
+    ];
+}
 
 function snapFreePoint(px, py) {
+    // --- 優先度1: 接続点への2Dスナップ ---
+    let bestDist = CONNPT_SNAP + 1;
+    let snapX = null, snapY = null;
+
+    nodes.forEach(n => {
+        getNodeConnectPoints(n).forEach(pt => {
+            const dx = px - pt.x, dy = py - pt.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < bestDist) {
+                bestDist = dist;
+                snapX = pt.x;
+                snapY = pt.y;
+            }
+        });
+    });
+
+    if (bestDist <= CONNPT_SNAP) {
+        return { x: snapX, y: snapY };
+    }
+
+    // --- 優先度2: 格子候補へのX・Y軸独立スナップ ---
     let sx = px, sy = py;
     let bestDX = FREE_SNAP + 1, bestDY = FREE_SNAP + 1;
 
     nodes.forEach(n => {
         const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
-        // このノードのX候補・Y候補
         const xCandidates = [n.x, cx, n.x + n.w];
         const yCandidates = [n.y, cy, n.y + n.h];
 
@@ -198,7 +230,6 @@ function snapFreePoint(px, py) {
         });
     });
 
-    // スナップが効いた軸だけ適用（閾値外はそのまま）
     return {
         x: bestDX < FREE_SNAP ? sx : px,
         y: bestDY < FREE_SNAP ? sy : py,
@@ -241,6 +272,51 @@ function updateFreeEdgeHandles(edge) {
         dot.setAttribute("cy",           pt.y);
         dot.setAttribute("r",            7   / viewScale);
         dot.setAttribute("stroke-width", 1.5 / viewScale);
+    });
+}
+
+// スナップ先ノードのハイライト管理
+let _snapHighlightedNode = null;
+
+function updateSnapHighlight(px, py) {
+    // 接続点スナップが効いているノードを探す
+    let snappedNode = null;
+    let bestDist = CONNPT_SNAP + 1;
+    nodes.forEach(n => {
+        getNodeConnectPoints(n).forEach(pt => {
+            const dx = px - pt.x, dy = py - pt.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < bestDist) { bestDist = dist; snappedNode = n; }
+        });
+    });
+
+    if (snappedNode !== _snapHighlightedNode) {
+        if (_snapHighlightedNode) setSnapHighlight(_snapHighlightedNode, false);
+        _snapHighlightedNode = snappedNode;
+        if (_snapHighlightedNode) setSnapHighlight(_snapHighlightedNode, true);
+    }
+}
+
+function clearSnapHighlight() {
+    if (_snapHighlightedNode) { setSnapHighlight(_snapHighlightedNode, false); _snapHighlightedNode = null; }
+}
+
+function setSnapHighlight(node, on) {
+    const el = node.el;
+    if (!el) return;
+    const applyTo = el._isCylinder ? Array.from(el.querySelectorAll("rect,ellipse")) : [el];
+    applyTo.forEach(e => {
+        if (on) {
+            e.setAttribute("stroke",       "#1976D2");
+            e.setAttribute("stroke-width", "2.5");
+            e.setAttribute("stroke-dasharray", "5,3");
+        } else {
+            // 通常選択状態に戻す（selectedNode なら赤、そうでなければ none）
+            const isSelected = (node === selectedNode) || selectedNodes.has(node);
+            e.setAttribute("stroke",       isSelected ? "red" : "none");
+            e.setAttribute("stroke-width", isSelected ? "3"   : "0");
+            e.removeAttribute("stroke-dasharray");
+        }
     });
 }
 
