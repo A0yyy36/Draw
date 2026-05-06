@@ -99,29 +99,40 @@ window.addEventListener("mousemove", (e) => {
 
     // フリーエッジ 本体ドラッグ（全体移動）
     if (freeEdgeBodyDrag && freeEdgeBodyEdge) {
-        const dx  = (e.clientX - freeEdgeBodyStartMX) / viewScale;
-        const dy  = (e.clientY - freeEdgeBodyStartMY) / viewScale;
-        let ax = freeEdgeBodyStartAX + dx;
-        let ay = freeEdgeBodyStartAY + dy;
-        let bx = freeEdgeBodyStartBX + dx;
-        let by = freeEdgeBodyStartBY + dy;
+        const dx = (e.clientX - freeEdgeBodyStartMX) / viewScale;
+        const dy = (e.clientY - freeEdgeBodyStartMY) / viewScale;
 
-        // 両端点でスナップ試行し、より近い方の補正量を全体に適用（軸独立）
-        const sa = snapFreePoint(ax, ay);
-        const sb = snapFreePoint(bx, by);
-        const dxa = sa.x - ax, dya = sa.y - ay;
-        const dxb = sb.x - bx, dyb = sb.y - by;
+        // 複数選択中フリーエッジをまとめて移動
+        if (freeEdgeGroupOffsets.length > 0) {
+            freeEdgeGroupOffsets.forEach(({ edge, ax, ay, bx, by }) => {
+                edge.a.x = ax + dx;
+                edge.a.y = ay + dy;
+                edge.b.x = bx + dx;
+                edge.b.y = by + dy;
+                updateEdgePath(edge);
+                updateFreeEdgeHandles(edge);
+            });
+        } else {
+            // 単体ドラッグ（スナップあり）
+            let ax = freeEdgeBodyStartAX + dx;
+            let ay = freeEdgeBodyStartAY + dy;
+            let bx = freeEdgeBodyStartBX + dx;
+            let by = freeEdgeBodyStartBY + dy;
 
-        // X軸：A・B のうち引力が強い方を採用
-        const snapDX = Math.abs(dxa) <= Math.abs(dxb) ? dxa : dxb;
-        const snapDY = Math.abs(dya) <= Math.abs(dyb) ? dya : dyb;
+            const sa = snapFreePoint(ax, ay);
+            const sb = snapFreePoint(bx, by);
+            const dxa = sa.x - ax, dya = sa.y - ay;
+            const dxb = sb.x - bx, dyb = sb.y - by;
+            const snapDX = Math.abs(dxa) <= Math.abs(dxb) ? dxa : dxb;
+            const snapDY = Math.abs(dya) <= Math.abs(dyb) ? dya : dyb;
 
-        freeEdgeBodyEdge.a.x = ax + snapDX;
-        freeEdgeBodyEdge.a.y = ay + snapDY;
-        freeEdgeBodyEdge.b.x = bx + snapDX;
-        freeEdgeBodyEdge.b.y = by + snapDY;
-        updateEdgePath(freeEdgeBodyEdge);
-        updateFreeEdgeHandles(freeEdgeBodyEdge);
+            freeEdgeBodyEdge.a.x = ax + snapDX;
+            freeEdgeBodyEdge.a.y = ay + snapDY;
+            freeEdgeBodyEdge.b.x = bx + snapDX;
+            freeEdgeBodyEdge.b.y = by + snapDY;
+            updateEdgePath(freeEdgeBodyEdge);
+            updateFreeEdgeHandles(freeEdgeBodyEdge);
+        }
     }
 
     // 矢印タイルドラッグ中：プレビュー線を描画
@@ -187,8 +198,9 @@ window.addEventListener("mouseup", (e) => {
 
     // フリーエッジ 本体ドラッグ終了
     if (freeEdgeBodyDrag) {
-        freeEdgeBodyDrag = false;
-        freeEdgeBodyEdge = null;
+        freeEdgeBodyDrag     = false;
+        freeEdgeBodyEdge     = null;
+        freeEdgeGroupOffsets = [];
     }
 
     // 矢印タイルドラッグ：ノード以外でドロップ→キャンセル

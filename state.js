@@ -72,6 +72,8 @@ let freeEdgeBodyEdge    = null;
 let freeEdgeBodyStartMX = 0, freeEdgeBodyStartMY = 0;
 let freeEdgeBodyStartAX = 0, freeEdgeBodyStartAY = 0;
 let freeEdgeBodyStartBX = 0, freeEdgeBodyStartBY = 0;
+// 複数フリーエッジのグループドラッグ用（selectedEdges 全体分の初期座標）
+let freeEdgeGroupOffsets = []; // [{ edge, ax, ay, bx, by }, ...]
 
 // ===== 矢印タイル接続待ち状態 =====
 // arrowConnectPending: { arrow, style, dash } | null

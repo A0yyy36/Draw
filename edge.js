@@ -328,19 +328,38 @@ function enableFreeEdgeBodyDrag(edge) {
         if (!edge.isFree) return;
         if (e.button !== 0) return;
         e.stopPropagation();
-        // 複数選択されたフリーエッジ群をまとめてドラッグする場合はそちらに委譲しない
-        // （単体ドラッグ：複数選択をクリアして単体選択へ）
-        if (!selectedEdges.has(edge)) {
+
+        // 全選択（ノードまたはフリーエッジが複数選択）中にドラッグ開始した場合は
+        // 選択状態をそのまま維持してグループドラッグに移行する
+        const inMultiSelection =
+            selectedEdges.has(edge) ||
+            selectedNodes.size > 0;
+
+        if (!inMultiSelection) {
+            // 単体ドラッグ：他の複数選択をクリアして単体選択へ
             selectedEdges.forEach(ed => highlightFreeEdgeMulti(ed, false));
             selectedEdges.clear();
+            selectEdge(edge);
         }
+        // inMultiSelection の場合は selectEdge を呼ばずに選択状態を維持
+
         freeEdgeBodyDrag    = true;
         freeEdgeBodyEdge    = edge;
         freeEdgeBodyStartMX = e.clientX;
         freeEdgeBodyStartMY = e.clientY;
         freeEdgeBodyStartAX = edge.a.x; freeEdgeBodyStartAY = edge.a.y;
         freeEdgeBodyStartBX = edge.b.x; freeEdgeBodyStartBY = edge.b.y;
-        selectEdge(edge);
+
+        // 複数選択中フリーエッジ全体の初期座標を記録
+        if (selectedEdges.size > 0) {
+            freeEdgeGroupOffsets = Array.from(selectedEdges).map(ed => ({
+                edge: ed,
+                ax: ed.a.x, ay: ed.a.y,
+                bx: ed.b.x, by: ed.b.y,
+            }));
+        } else {
+            freeEdgeGroupOffsets = [];
+        }
     });
 }
 

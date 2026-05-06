@@ -353,10 +353,26 @@ window.addEventListener("keydown", (e) => {
             document.getElementById("ep-delete").click();
             return;
         }
-        if (selectedNodes.size > 0) {
+        // 複数選択中（ノードおよび／またはフリーエッジ）をまとめて削除
+        if (selectedNodes.size > 0 || selectedEdges.size > 0) {
+            // フリーエッジを先に削除
+            selectedEdges.forEach(ed => {
+                ed.pathEl.remove();
+                ed.hitEl.remove();
+                hideCPDot(ed);
+                hideFreeEdgeHandles(ed);
+                const idx = edges.indexOf(ed);
+                if (idx !== -1) edges.splice(idx, 1);
+            });
+            selectedEdges.clear();
+            // ノードを削除（ノードに紐づくエッジも deleteNode 内で削除される）
             selectedNodes.forEach(n => deleteNode(n));
-            selectedNodes.clear(); selectedNode = null; hideResizeHandles();
-        } else if (selectedNode) {
+            selectedNodes.clear();
+            selectedNode = null;
+            hideResizeHandles();
+            return;
+        }
+        if (selectedNode) {
             deleteNode(selectedNode); selectedNode = null; hideResizeHandles();
         }
     }
