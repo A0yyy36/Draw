@@ -115,6 +115,9 @@ function selectEdge(edge) {
     selectedNodes.forEach(n => highlightMulti(n, false));
     selectedNodes.clear();
     hideResizeHandles();
+    // 複数選択フリーエッジをクリア
+    selectedEdges.forEach(ed => { if (ed !== edge) highlightFreeEdgeMulti(ed, false); });
+    selectedEdges.clear();
 
     selectedEdge = edge;
     highlightEdge(edge, true);
@@ -304,12 +307,33 @@ function hideFreeEdgeHandles(edge) {
     edge._epHandles = null;
 }
 
+// ===== フリーエッジ複数選択ハイライト =====
+function highlightFreeEdgeMulti(edge, on) {
+    if (!edge) return;
+    if (on) {
+        edge.pathEl.setAttribute("stroke",       "#1976D2");
+        edge.pathEl.setAttribute("stroke-width", Math.max(edge.width || 2, 2) + 2);
+        edge.pathEl.setAttribute("filter",       "url(#sel-glow)");
+    } else {
+        edge.pathEl.setAttribute("stroke",       edge.color || "#333333");
+        edge.pathEl.setAttribute("stroke-width", edge.width || 2);
+        edge.pathEl.removeAttribute("filter");
+        applyEdgeStyle(edge); // 矢印・破線なども元に戻す
+    }
+}
+
 // ===== フリーエッジ 本体ドラッグ有効化 =====
 function enableFreeEdgeBodyDrag(edge) {
     edge.hitEl.addEventListener("mousedown", (e) => {
         if (!edge.isFree) return;
         if (e.button !== 0) return;
         e.stopPropagation();
+        // 複数選択されたフリーエッジ群をまとめてドラッグする場合はそちらに委譲しない
+        // （単体ドラッグ：複数選択をクリアして単体選択へ）
+        if (!selectedEdges.has(edge)) {
+            selectedEdges.forEach(ed => highlightFreeEdgeMulti(ed, false));
+            selectedEdges.clear();
+        }
         freeEdgeBodyDrag    = true;
         freeEdgeBodyEdge    = edge;
         freeEdgeBodyStartMX = e.clientX;

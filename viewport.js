@@ -268,6 +268,20 @@ function finishSelectionBox() {
             highlightMulti(n, true);
         }
     });
+    // フリーエッジ（独立矢印）も矩形内なら選択
+    edges.forEach(ed => {
+        if (!ed.isFree) return;
+        const minX = Math.min(ed.a.x, ed.b.x);
+        const maxX = Math.max(ed.a.x, ed.b.x);
+        const minY = Math.min(ed.a.y, ed.b.y);
+        const maxY = Math.max(ed.a.y, ed.b.y);
+        // 両端点がともに矩形内に収まっている場合のみ選択
+        if (ed.a.x >= lx1 && ed.a.x <= lx2 && ed.a.y >= ly1 && ed.a.y <= ly2 &&
+            ed.b.x >= lx1 && ed.b.x <= lx2 && ed.b.y >= ly1 && ed.b.y <= ly2) {
+            selectedEdges.add(ed);
+            highlightFreeEdgeMulti(ed, true);
+        }
+    });
 }
 
 // ===== SVGクリック（背景クリックで選択クリア）=====

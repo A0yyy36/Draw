@@ -139,6 +139,9 @@ function clearSelection() {
         hideFreeEdgeHandles(selectedEdge);
         selectedEdge = null;
     }
+    // 矩形選択されたフリーエッジ群もクリア
+    selectedEdges.forEach(ed => highlightFreeEdgeMulti(ed, false));
+    selectedEdges.clear();
     const panel = document.getElementById("edge-panel");
     if (panel) panel.classList.remove("visible");
     // 矢印接続待ちもクリア
@@ -182,7 +185,7 @@ function stopEdgeScroll() {
 }
 
 function enableDrag(el, node) {
-    let dragging = false, ox, oy, groupOffsets = [];
+    let dragging = false, ox, oy, groupOffsets = [], edgeGroupOffsets = [];
 
     el.addEventListener("mousedown", (e) => {
         if (resizingNode || isPanning || spaceDown || e.button !== 0) return;
@@ -195,8 +198,15 @@ function enableDrag(el, node) {
             groupOffsets = Array.from(selectedNodes).map(n => ({
                 node: n, dx: n.x - node.x, dy: n.y - node.y,
             }));
+            // 矩形選択されたフリーエッジも一緒に動かす
+            edgeGroupOffsets = Array.from(selectedEdges).map(ed => ({
+                edge: ed,
+                dax: ed.a.x - node.x, day: ed.a.y - node.y,
+                dbx: ed.b.x - node.x, dby: ed.b.y - node.y,
+            }));
         } else {
             groupOffsets = [];
+            edgeGroupOffsets = [];
         }
         e.stopPropagation();
     });
@@ -210,6 +220,12 @@ function enableDrag(el, node) {
             groupOffsets.forEach(({ node: n, dx, dy }) => {
                 n.x = newX + dx; n.y = newY + dy;
                 updateNodePosition(n);
+            });
+            // フリーエッジも同期移動
+            edgeGroupOffsets.forEach(({ edge: ed, dax, day, dbx, dby }) => {
+                ed.a.x = newX + dax; ed.a.y = newY + day;
+                ed.b.x = newX + dbx; ed.b.y = newY + dby;
+                updateEdgePath(ed);
             });
         } else {
             node.x = newX; node.y = newY;
@@ -239,7 +255,7 @@ function enableDrag(el, node) {
 
     window.addEventListener("mouseup", () => {
         if (dragging) { anyDragging = false; stopEdgeScroll(); clearSnapGuides(); }
-        dragging = false; groupOffsets = [];
+        dragging = false; groupOffsets = []; edgeGroupOffsets = [];
     });
 }
 

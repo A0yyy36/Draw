@@ -17,6 +17,7 @@ let globalWidth     = 2;
 let selectedNode  = null;
 let selectedNodes = new Set();
 let selectedEdge  = null;
+let selectedEdges = new Set(); // 矩形選択で選ばれたフリーエッジ群
 
 // ===== リサイズ状態 =====
 let resizeHandleGroup = null;
