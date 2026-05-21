@@ -190,6 +190,18 @@ window.addEventListener("mouseup", (e) => {
 
     // フリーエッジ 端点ハンドルドラッグ終了
     if (freeEdgeDragging) {
+        // スナップしていたらノードへのアタッチ情報を記録
+        if (freeEdgeDragEdge && freeEdgeDragEndpt) {
+            const pt      = freeEdgeDragEdge[freeEdgeDragEndpt];
+            const snapped = snapFreePoint(pt.x, pt.y);
+            if (snapped.node) {
+                pt._attachNode  = snapped.node;
+                pt._attachPtIdx = snapped.ptIdx;
+            } else {
+                pt._attachNode  = null;
+                pt._attachPtIdx = null;
+            }
+        }
         freeEdgeDragging  = false;
         freeEdgeDragEdge  = null;
         freeEdgeDragEndpt = null;

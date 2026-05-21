@@ -23,6 +23,10 @@ function saveFlowchart() {
             ay:     e.isFree ? e.a.y : undefined,
             bx:     e.isFree ? e.b.x : undefined,
             by:     e.isFree ? e.b.y : undefined,
+            aAttachNodeId:  (e.isFree && e.a._attachNode) ? e.a._attachNode.id : undefined,
+            aAttachPtIdx:   (e.isFree && e.a._attachNode) ? e.a._attachPtIdx  : undefined,
+            bAttachNodeId:  (e.isFree && e.b._attachNode) ? e.b._attachNode.id : undefined,
+            bAttachPtIdx:   (e.isFree && e.b._attachNode) ? e.b._attachPtIdx  : undefined,
             style:  e.style,
             arrow:  e.arrow,
             dash:   e.dash,
@@ -74,6 +78,15 @@ function loadFlowchart(jsonData) {
         if (ed.isFree) {
             a = makeFreePoint(ed.ax, ed.ay);
             b = makeFreePoint(ed.bx, ed.by);
+            // アタッチ情報を復元
+            if (ed.aAttachNodeId != null) {
+                const an = nodes.find(n => n.id === ed.aAttachNodeId);
+                if (an) { a._attachNode = an; a._attachPtIdx = ed.aAttachPtIdx; }
+            }
+            if (ed.bAttachNodeId != null) {
+                const bn = nodes.find(n => n.id === ed.bAttachNodeId);
+                if (bn) { b._attachNode = bn; b._attachPtIdx = ed.bAttachPtIdx; }
+            }
         } else {
             a = nodes.find(n => n.id === ed.aId);
             b = nodes.find(n => n.id === ed.bId);

@@ -46,6 +46,15 @@ function buildPath(edge) {
 }
 
 function updateEdgePath(edge) {
+    // ノードにアタッチされたフリーポイントの座標をノードの現在位置に追従させる
+    ["a", "b"].forEach(which => {
+        const pt = edge[which];
+        if (pt._isFreePoint && pt._attachNode) {
+            const pts = getNodeConnectPoints(pt._attachNode);
+            const cp  = pts[pt._attachPtIdx];
+            if (cp) { pt.x = cp.x; pt.y = cp.y; }
+        }
+    });
     const d = buildPath(edge);
     edge.pathEl.setAttribute("d", d);
     edge.hitEl.setAttribute("d",  d);
@@ -197,24 +206,27 @@ function snapFreePoint(px, py) {
     // 接続点（ノードの上下左右の辺中央）への2Dスナップのみ
     let bestDist = CONNPT_SNAP + 1;
     let snapX = null, snapY = null;
+    let snapNode = null, snapPtIdx = null;
 
     nodes.forEach(n => {
-        getNodeConnectPoints(n).forEach(pt => {
+        getNodeConnectPoints(n).forEach((pt, idx) => {
             const dx = px - pt.x, dy = py - pt.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < bestDist) {
                 bestDist = dist;
                 snapX = pt.x;
                 snapY = pt.y;
+                snapNode = n;
+                snapPtIdx = idx;
             }
         });
     });
 
     if (bestDist <= CONNPT_SNAP) {
-        return { x: snapX, y: snapY };
+        return { x: snapX, y: snapY, node: snapNode, ptIdx: snapPtIdx };
     }
 
-    return { x: px, y: py };
+    return { x: px, y: py, node: null, ptIdx: null };
 }
 
 // ===== フリーエッジ 端点ハンドル =====
@@ -236,6 +248,10 @@ function showFreeEdgeHandles(edge) {
 
         dot.addEventListener("mousedown", (e) => {
             e.stopPropagation();
+            // ドラッグ開始時にアタッチを解除（自由に動かせるように）
+            const pt = edge[which];
+            pt._attachNode  = null;
+            pt._attachPtIdx = null;
             freeEdgeDragging  = true;
             freeEdgeDragEdge  = edge;
             freeEdgeDragEndpt = which;
@@ -349,6 +365,9 @@ function enableFreeEdgeBodyDrag(edge) {
         freeEdgeBodyStartMY = e.clientY;
         freeEdgeBodyStartAX = edge.a.x; freeEdgeBodyStartAY = edge.a.y;
         freeEdgeBodyStartBX = edge.b.x; freeEdgeBodyStartBY = edge.b.y;
+        // 本体ドラッグ時はアタッチを解除
+        edge.a._attachNode = null; edge.a._attachPtIdx = null;
+        edge.b._attachNode = null; edge.b._attachPtIdx = null;
 
         // 複数選択中フリーエッジ全体の初期座標を記録
         if (selectedEdges.size > 0) {
