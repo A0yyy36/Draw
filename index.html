@@ -167,17 +167,74 @@
                 color: #1a3f8f;
             }
 
-            /* ===== キャンバスエリア ===== */
-            #canvas-wrap {
+            /* ===== キャンバスエリア（左右分割）===== */
+            #canvas-area {
                 flex: 1;
+                display: flex;
                 overflow: hidden;
-                position: relative;
+            }
+            #left-panel {
+                flex: 1;
+                min-width: 200px;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                background: #fff;
+            }
+            #right-panel {
+                flex: 1;
+                min-width: 200px;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                background: #f9fafb;
+            }
+            .panel-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 4px 12px;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                flex-shrink: 0;
+                user-select: none;
+            }
+            .left-header  { background: #e8f0fe; border-bottom: 1px solid #c5d2f6; color: #1a3a8f; }
+            .right-header { background: #e8f5e9; border-bottom: 1px solid #b2dfdb; color: #1b5e20; }
+            .panel-title { font-size: 12px; }
+            .panel-hint  { font-size: 10px; font-weight: 400; opacity: 0.7; }
+            .right-header-actions { display: flex; align-items: center; gap: 8px; }
+            .auto-refresh-label {
+                display: flex; align-items: center; gap: 4px;
+                font-size: 10px; font-weight: 500; cursor: pointer;
+            }
+            .refresh-btn {
+                padding: 2px 10px; background: #43a047; color: #fff;
+                border: none; border-radius: 4px; font-size: 11px;
+                cursor: pointer; font-weight: 600; transition: background 0.13s;
+            }
+            .refresh-btn:hover  { background: #2e7d32; }
+            .refresh-btn:active { background: #1b5e20; }
+            #canvas-wrap, #right-canvas-wrap {
+                flex: 1; overflow: hidden; position: relative;
             }
             #canvas {
-                width: 100%;
-                height: 100%;
-                display: block;
-                background: #fff;
+                width: 100%; height: 100%; display: block; background: #fff;
+            }
+            #right-canvas {
+                width: 100%; height: 100%; display: block; background: #f9fafb;
+            }
+            #center-resize-handle {
+                width: 6px; background: #e0e4ef; cursor: col-resize;
+                flex-shrink: 0; display: flex; align-items: center;
+                justify-content: center; transition: background 0.15s; z-index: 10;
+            }
+            #center-resize-handle:hover,
+            #center-resize-handle.dragging { background: rgba(74,124,220,0.35); }
+            #center-drag-bar {
+                width: 2px; height: 40px; border-radius: 2px;
+                background: #b0b8d0; pointer-events: none;
             }
 
             /* ===== アコーディオン ===== */
@@ -257,7 +314,7 @@
                 display: none;
                 position: fixed;
                 bottom: 14px;
-                left: calc(var(--side-w, 72px) + 5px + 50%);
+                left: 50%;
                 transform: translateX(-50%);
                 background: #fff;
                 border: 1px solid #bbb;
@@ -437,10 +494,45 @@
                 </div>
             </div><!-- #side-panel-wrapper -->
 
-            <!-- キャンバス -->
-            <div id="canvas-wrap">
-                <svg id="canvas"></svg>
-            </div>
+            <!-- 左右キャンバスエリア -->
+            <div id="canvas-area">
+
+                <!-- 左パネル：自由編集 -->
+                <div id="left-panel">
+                    <div class="panel-header left-header">
+                        <span class="panel-title">✏️ 編集キャンバス</span>
+                        <span class="panel-hint">ノードやエッジを自由に配置</span>
+                    </div>
+                    <div id="canvas-wrap">
+                        <svg id="canvas"></svg>
+                    </div>
+                </div>
+
+                <!-- 中央リサイズハンドル -->
+                <div id="center-resize-handle">
+                    <div id="center-drag-bar"></div>
+                </div>
+
+                <!-- 右パネル：整理済みレイアウト -->
+                <div id="right-panel">
+                    <div class="panel-header right-header">
+                        <span class="panel-title">🗂 整理済みレイアウト</span>
+                        <div class="right-header-actions">
+                            <label class="auto-refresh-label">
+                                <input type="checkbox" id="auto-refresh-check" checked>
+                                自動更新
+                            </label>
+                            <button id="refresh-right-btn" class="refresh-btn" title="右パネルを更新">
+                                ↺ 更新
+                            </button>
+                        </div>
+                    </div>
+                    <div id="right-canvas-wrap">
+                        <svg id="right-canvas"></svg>
+                    </div>
+                </div>
+
+            </div><!-- #canvas-area -->
 
         </div><!-- #main-area -->
 
@@ -612,6 +704,44 @@
             })();
         </script>
 
+        <script>
+        // ===== 中央リサイズハンドル =====
+        (function() {
+            const handle   = document.getElementById('center-resize-handle');
+            const leftPanel  = document.getElementById('left-panel');
+            const rightPanel = document.getElementById('right-panel');
+            let dragging = false, startX = 0, startLW = 0, startRW = 0;
+
+            handle.addEventListener('mousedown', (e) => {
+                dragging = true;
+                startX   = e.clientX;
+                startLW  = leftPanel.getBoundingClientRect().width;
+                startRW  = rightPanel.getBoundingClientRect().width;
+                handle.classList.add('dragging');
+                document.body.style.cursor    = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!dragging) return;
+                const dx   = e.clientX - startX;
+                const newL = Math.max(200, startLW + dx);
+                const newR = Math.max(200, startRW - dx);
+                leftPanel.style.flex  = 'none';
+                leftPanel.style.width = newL + 'px';
+                rightPanel.style.flex  = 'none';
+                rightPanel.style.width = newR + 'px';
+            });
+            window.addEventListener('mouseup', () => {
+                if (!dragging) return;
+                dragging = false;
+                handle.classList.remove('dragging');
+                document.body.style.cursor    = '';
+                document.body.style.userSelect = '';
+            });
+        })();
+        </script>
+
         <!-- 読み込み順序が依存関係を決定します。変更しないでください -->
         <script src="state.js"></script>    <!-- 1. グローバル状態 -->
         <script src="canvas.js"></script>   <!-- 2. SVG初期化・グリッド・座標変換 -->
@@ -620,5 +750,6 @@
         <script src="viewport.js"></script> <!-- 5. パン・ズーム・矩形選択 -->
         <script src="toolbar.js"></script>  <!-- 6. ツールバーUI -->
         <script src="fileio.js"></script>   <!-- 7. 保存・読み込み -->
+        <script src="layout.js"></script>   <!-- 8. 右パネル自動レイアウト -->
     </body>
 </html>
