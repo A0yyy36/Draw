@@ -61,9 +61,22 @@ function drawRightGrid() {
     }
 }
 
-// 右パネルのパン操作
+// 右パネルのパン操作（左パネルと同じ方式）
+// スペースキー押下中 or 中クリック → パン
+// Ctrl + ホイール → ズーム
+// ホイール（2本指スクロール含む） → パン
+let rightSpaceDown = false;
+window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && !document.getElementById("node-input")) {
+        rightSpaceDown = true;
+    }
+});
+window.addEventListener("keyup", (e) => {
+    if (e.code === "Space") { rightSpaceDown = false; }
+});
+
 rightSvg.addEventListener("mousedown", (e) => {
-    if (e.button === 1 || e.button === 0) {
+    if (e.button === 1 || (e.button === 0 && rightSpaceDown)) {
         rightIsPanning = true;
         rightPanStart  = { mx: e.clientX, my: e.clientY, vx: rightViewX, vy: rightViewY };
         rightSvg.style.cursor = "grabbing";
@@ -77,18 +90,29 @@ window.addEventListener("mousemove", (e) => {
     applyRightTransform();
 });
 window.addEventListener("mouseup", () => {
-    if (rightIsPanning) { rightIsPanning = false; rightSvg.style.cursor = ""; }
+    if (rightIsPanning) {
+        rightIsPanning = false;
+        rightSvg.style.cursor = rightSpaceDown ? "grab" : "";
+    }
 });
 rightSvg.addEventListener("wheel", (e) => {
     e.preventDefault();
-    const zf = e.deltaY < 0 ? 1.08 : 1 / 1.08;
-    const ns = Math.min(5, Math.max(0.1, rightViewScale * zf));
-    const r  = rightSvg.getBoundingClientRect();
-    const mx = e.clientX - r.left, my = e.clientY - r.top;
-    rightViewX     = mx - (mx - rightViewX) * (ns / rightViewScale);
-    rightViewY     = my - (my - rightViewY) * (ns / rightViewScale);
-    rightViewScale = ns;
-    applyRightTransform();
+    if (e.ctrlKey) {
+        // Ctrl + ホイール → ズーム（ピンチイン・アウトもここ）
+        const zf = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+        const ns = Math.min(5, Math.max(0.1, rightViewScale * zf));
+        const r  = rightSvg.getBoundingClientRect();
+        const mx = e.clientX - r.left, my = e.clientY - r.top;
+        rightViewX     = mx - (mx - rightViewX) * (ns / rightViewScale);
+        rightViewY     = my - (my - rightViewY) * (ns / rightViewScale);
+        rightViewScale = ns;
+        applyRightTransform();
+    } else {
+        // 2本指スクロール / 通常ホイール → パン
+        rightViewX -= e.deltaX;
+        rightViewY -= e.deltaY;
+        applyRightTransform();
+    }
 }, { passive: false });
 
 // ===== マーカー生成（右パネル用）=====
