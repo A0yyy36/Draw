@@ -365,9 +365,7 @@ function enableFreeEdgeBodyDrag(edge) {
         freeEdgeBodyStartMY = e.clientY;
         freeEdgeBodyStartAX = edge.a.x; freeEdgeBodyStartAY = edge.a.y;
         freeEdgeBodyStartBX = edge.b.x; freeEdgeBodyStartBY = edge.b.y;
-        // 本体ドラッグ時はアタッチを解除
-        edge.a._attachNode = null; edge.a._attachPtIdx = null;
-        edge.b._attachNode = null; edge.b._attachPtIdx = null;
+        // アタッチ情報はそのまま保持（本体ドラッグ時でも追従を維持）
 
         // 複数選択中フリーエッジ全体の初期座標を記録
         if (selectedEdges.size > 0) {
@@ -491,3 +489,57 @@ document.getElementById("ep-delete").addEventListener("click", () => {
         document.getElementById("edge-panel").classList.remove("visible");
     }
 });
+
+// ===== フリーエッジ → ノードエッジ昇格 =====
+// 両端点が共にノードにアタッチされていたらフリーエッジを通常エッジに変換する
+function promoteToNodeEdge(edge) {
+    const aPt = edge.a, bPt = edge.b;
+    if (!aPt._attachNode || !bPt._attachNode) return; // 片方だけならスキップ
+
+    const nodeA = aPt._attachNode;
+    const nodeB = bPt._attachNode;
+
+    // 同じノード同士への自己ループは昇格しない
+    if (nodeA === nodeB) return;
+
+    // 既に同じ組み合わせのノードエッジが存在する場合は昇格しない
+    const alreadyExists = edges.some(e =>
+        !e.isFree &&
+        ((e.a === nodeA && e.b === nodeB) || (e.a === nodeB && e.b === nodeA))
+    );
+    if (alreadyExists) {
+        // フリーエッジのみ削除
+        const idx = edges.indexOf(edge);
+        if (idx !== -1) {
+            edge.pathEl.remove(); edge.hitEl.remove();
+            hideCPDot(edge); hideFreeEdgeHandles(edge);
+            edges.splice(idx, 1);
+        }
+        if (selectedEdge === edge) {
+            selectedEdge = null;
+            document.getElementById("edge-panel").classList.remove("visible");
+        }
+        return;
+    }
+
+    // フリーエッジを配列から除去してSVG要素を削除
+    const idx = edges.indexOf(edge);
+    if (idx !== -1) {
+        edge.pathEl.remove(); edge.hitEl.remove();
+        hideCPDot(edge); hideFreeEdgeHandles(edge);
+        edges.splice(idx, 1);
+    }
+    if (selectedEdge === edge) { selectedEdge = null; }
+
+    // 通常ノードエッジとして生成して選択
+    const newEdge = createEdge(nodeA, nodeB, {
+        style:  edge.style,
+        arrow:  edge.arrow,
+        dash:   edge.dash,
+        color:  edge.color,
+        width:  edge.width,
+        cpOffX: edge.cpOffX || 0,
+        cpOffY: edge.cpOffY || 0,
+    });
+    selectEdge(newEdge);
+}

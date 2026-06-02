@@ -201,6 +201,8 @@ window.addEventListener("mouseup", (e) => {
                 pt._attachNode  = null;
                 pt._attachPtIdx = null;
             }
+            // 両端がノードにアタッチされていたら通常エッジへ昇格
+            promoteToNodeEdge(freeEdgeDragEdge);
         }
         freeEdgeDragging  = false;
         freeEdgeDragEdge  = null;
@@ -210,6 +212,22 @@ window.addEventListener("mouseup", (e) => {
 
     // フリーエッジ 本体ドラッグ終了
     if (freeEdgeBodyDrag) {
+        // 本体ドラッグ終了時に両端を再スナップして昇格チェック
+        if (freeEdgeBodyEdge) {
+            ["a", "b"].forEach(which => {
+                const pt = freeEdgeBodyEdge[which];
+                if (!pt._attachNode) {
+                    // アタッチなしの端点のみ再スナップ
+                    const snapped = snapFreePoint(pt.x, pt.y);
+                    if (snapped.node) {
+                        pt._attachNode  = snapped.node;
+                        pt._attachPtIdx = snapped.ptIdx;
+                        pt.x = snapped.x; pt.y = snapped.y;
+                    }
+                }
+            });
+            promoteToNodeEdge(freeEdgeBodyEdge);
+        }
         freeEdgeBodyDrag     = false;
         freeEdgeBodyEdge     = null;
         freeEdgeGroupOffsets = [];
