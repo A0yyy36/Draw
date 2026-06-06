@@ -286,6 +286,54 @@
             .accordion-menu button:hover,
             .accordion-menu label:hover { background: #f0f4ff; }
 
+            /* ===== エクスポート ホバーサブメニュー ===== */
+            .submenu-wrapper {
+                position: relative;
+            }
+            .submenu-trigger {
+                display: block;
+                width: 100%;
+                padding: 7px 16px;
+                text-align: left;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 13px;
+                white-space: nowrap;
+                box-sizing: border-box;
+                color: #222;
+            }
+            .submenu-trigger::after { content: ' \25B6'; font-size: 9px; color: #999; }
+            .submenu-trigger:hover  { background: #f0f4ff; }
+            .submenu {
+                display: none;
+                position: absolute;
+                top: 0;
+                left: 100%;
+                background: #fff;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+                z-index: 300;
+                min-width: 50px;
+                padding: 4px 0;
+            }
+            .submenu-wrapper:hover .submenu { display: block; }
+            .submenu button {
+                display: block;
+                width: 100%;
+                padding: 7px 16px;
+                text-align: left;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 13px;
+                white-space: nowrap;
+                box-sizing: border-box;
+                color: #222;
+            }
+            .submenu button:hover { background: #f0f4ff; }
+
             /* ===== セパレータ ===== */
             .sep {
                 width: 1px;
@@ -345,11 +393,15 @@
                 <div class="accordion-menu" id="file-menu">
                     <button data-shape="save">保存</button>
                     <label for="load-input">ファイルを開く</label>
-                    <hr style="margin:4px 0;border:none;border-top:1px solid #e0e0e0;">
-                    <button onclick="exportAsSVG(); this.closest('.accordion-menu').classList.remove('open'); document.getElementById('file-menu-trigger').classList.remove('open');">SVG として書き出し</button>
-                    <button onclick="exportAsPNG(); this.closest('.accordion-menu').classList.remove('open'); document.getElementById('file-menu-trigger').classList.remove('open');">PNG として書き出し</button>
-                    <button onclick="exportAsJPEG(); this.closest('.accordion-menu').classList.remove('open'); document.getElementById('file-menu-trigger').classList.remove('open');">JPEG として書き出し</button>
-                    <button onclick="exportAsPDF(); this.closest('.accordion-menu').classList.remove('open'); document.getElementById('file-menu-trigger').classList.remove('open');">PDF として書き出し</button>
+                    <div class="submenu-wrapper">
+                        <button class="submenu-trigger">エクスポート</button>
+                        <div class="submenu">
+                            <button onclick="exportAsSVG();">SVG</button>
+                            <button onclick="exportAsPNG();">PNG</button>
+                            <button onclick="exportAsJPEG();">JPEG</button>
+                            <button onclick="exportAsPDF();">PDF</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <input type="file" id="load-input" accept=".json" style="display:none">
