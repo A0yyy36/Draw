@@ -345,6 +345,11 @@
                 <div class="accordion-menu" id="file-menu">
                     <button data-shape="save">保存</button>
                     <label for="load-input">ファイルを開く</label>
+                    <hr style="margin:4px 0;border:none;border-top:1px solid #e0e0e0;">
+                    <button onclick="exportAsSVG(); this.closest('.accordion-menu').classList.remove('open'); document.getElementById('file-menu-trigger').classList.remove('open');">SVG として書き出し</button>
+                    <button onclick="exportAsPNG(); this.closest('.accordion-menu').classList.remove('open'); document.getElementById('file-menu-trigger').classList.remove('open');">PNG として書き出し</button>
+                    <button onclick="exportAsJPEG(); this.closest('.accordion-menu').classList.remove('open'); document.getElementById('file-menu-trigger').classList.remove('open');">JPEG として書き出し</button>
+                    <button onclick="exportAsPDF(); this.closest('.accordion-menu').classList.remove('open'); document.getElementById('file-menu-trigger').classList.remove('open');">PDF として書き出し</button>
                 </div>
             </div>
             <input type="file" id="load-input" accept=".json" style="display:none">
@@ -751,5 +756,8 @@
         <script src="toolbar.js"></script>  <!-- 6. ツールバーUI -->
         <script src="fileio.js"></script>   <!-- 7. 保存・読み込み -->
         <script src="layout.js"></script>   <!-- 8. 右パネル自動レイアウト -->
+        <!-- jsPDF（PDFエクスポート用） -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="export.js"></script>   <!-- 9. SVG/PNG/JPEG/PDFエクスポート -->
     </body>
 </html>
